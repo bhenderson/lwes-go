@@ -3,6 +3,7 @@ package lwes
 import (
     "net"
     "log"
+    "time"
 )
 
 const (
@@ -16,13 +17,22 @@ const (
     MAX_MSG_SIZE = 65507
 )
 
-func Listener() {
-    // TODO change to ListenUDP if addr is zero
-    socket, err := net.ListenMulticastUDP("udp4", nil, &net.UDPAddr{
-        // IP:   net.IPv4zero,
-        IP:   net.IPv4(224,2,2,22),
-        Port: 12345,
-    })
+type Event interface {
+    Name() string
+}
+
+func Listener(ip_addr net.IP, port int) {
+    laddr := net.UDPAddr{ip_addr, port}
+
+    var socket *net.UDPConn
+    var err error
+
+    if ip_addr.IsMulticast() {
+        socket, err = net.ListenMulticastUDP("udp4", nil, &laddr)
+    } else {
+        socket, err = net.ListenUDP("udp4", &laddr)
+    }
+
     if err != nil {
         log.Fatal(err)
     }
@@ -31,11 +41,15 @@ func Listener() {
     for {
         buff := make([]byte, MAX_MSG_SIZE)
         read, raddr, err := socket.ReadFromUDP(buff)
+
         if err != nil {
             log.Fatal(err)
         }
 
+        time := time.Now()
+
         log.Println(raddr)
+        log.Println(time)
         log.Println(buff[:read])
     }
 }
