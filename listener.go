@@ -17,20 +17,24 @@ const (
     MAX_MSG_SIZE = 65507
 )
 
-type Event interface {
-    Name() string
+type Event struct {
+    Name string
+    // http://golang.org/doc/articles/json_and_go.html
+    attributes map[string]interface{}
 }
 
-func Listener(ip_addr net.IP, port int) {
-    laddr := net.UDPAddr{ip_addr, port}
+// an action is a listener callback
+type listenerAction func(event *Event)
 
+//Listener starts listening on ip_addr and port
+func Listener(laddr *net.UDPAddr, callback listenerAction) {
     var socket *net.UDPConn
     var err error
 
-    if ip_addr.IsMulticast() {
-        socket, err = net.ListenMulticastUDP("udp4", nil, &laddr)
+    if laddr.IP.IsMulticast() {
+        socket, err = net.ListenMulticastUDP("udp4", nil, laddr)
     } else {
-        socket, err = net.ListenUDP("udp4", &laddr)
+        socket, err = net.ListenUDP("udp4", laddr)
     }
 
     if err != nil {
@@ -48,8 +52,23 @@ func Listener(ip_addr net.IP, port int) {
 
         time := time.Now()
 
-        log.Println(raddr)
-        log.Println(time)
-        log.Println(buff[:read])
+        event := NewEvent()
+        event.attributes["receiptTime"] = time
+        event.attributes["senderIp"]    = raddr.IP
+        event.attributes["senderPort"]  = raddr.Port
+
+        deserializeEvent(&event, buff[:read])
+
+        callback(&event)
     }
+}
+
+// NewEvent returns an initialized Event
+func NewEvent() Event {
+    return Event{attributes: make(map[string]interface{})}
+}
+
+func deserializeEvent(event *Event, buff []byte) {
+
+    log.Println(buff)
 }
