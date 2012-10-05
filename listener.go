@@ -121,7 +121,8 @@ func deserializeEvent(event *Event, buf []byte) {
             // binary.Read(p, binary.BigEndian, &tmpUint32)
             // event.attributes[attrName] = uint32(p.Next(int(tmpUint32)))
         case 4: // LWES_INT_32_TOKEN
-            event.attributes[attrName] = p.Next(4)
+            x := p.Next(4)
+            event.attributes[attrName] = (x[0]<<24)|(x[1]<<8)|(x[2]<<8)|(x[3])
         case 5: // LWES_STRING_TOKEN
             var size uint16
             binary.Read(p, binary.BigEndian, &size)
