@@ -4,6 +4,8 @@ import (
     "net"
     "log"
     "time"
+    "bytes"
+    "encoding/binary"
 )
 
 const (
@@ -18,7 +20,7 @@ const (
 )
 
 type Event struct {
-    Name string
+    name string
     // http://golang.org/doc/articles/json_and_go.html
     attributes map[string]interface{}
 }
@@ -28,6 +30,11 @@ type listenerAction func(event *Event)
 
 //Listener starts listening on ip_addr and port
 func Listener(laddr *net.UDPAddr, callback listenerAction) {
+    // pointless if no callback func
+    if callback == nil {
+        return
+    }
+
     var socket *net.UDPConn
     var err error
 
@@ -43,8 +50,8 @@ func Listener(laddr *net.UDPAddr, callback listenerAction) {
     defer socket.Close()
 
     for {
-        buff := make([]byte, MAX_MSG_SIZE)
-        read, raddr, err := socket.ReadFromUDP(buff)
+        buf := make([]byte, MAX_MSG_SIZE)
+        read, raddr, err := socket.ReadFromUDP(buf)
 
         if err != nil {
             log.Fatal(err)
@@ -57,7 +64,7 @@ func Listener(laddr *net.UDPAddr, callback listenerAction) {
         event.attributes["senderIp"]    = raddr.IP
         event.attributes["senderPort"]  = raddr.Port
 
-        deserializeEvent(&event, buff[:read])
+        deserializeEvent(&event, buf[:read])
 
         callback(&event)
     }
@@ -68,7 +75,11 @@ func NewEvent() Event {
     return Event{attributes: make(map[string]interface{})}
 }
 
-func deserializeEvent(event *Event, buff []byte) {
+func deserializeEvent(event *Event, buf []byte) {
+    p := bytes.NewBuffer(buf)
 
-    log.Println(buff)
+    var nameSize byte
+    binary.Read(p, binary.LittleEndian, &nameSize)
+
+    log.Println(string(p.Next(int(nameSize))))
 }
