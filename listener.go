@@ -79,7 +79,35 @@ func deserializeEvent(event *Event, buf []byte) {
     p := bytes.NewBuffer(buf)
 
     var nameSize byte
-    binary.Read(p, binary.LittleEndian, &nameSize)
+    binary.Read(p, binary.BigEndian, &nameSize)
 
-    log.Println(string(p.Next(int(nameSize))))
+    event.name = string(p.Next(int(nameSize)))
+
+    var attrSize uint16
+    binary.Read(p, binary.BigEndian, &attrSize)
+
+    for i:=0; i < int(attrSize); i++ {
+        var attrNameSize byte
+        var attrName string
+        var attrType byte
+
+        binary.Read(p, binary.BigEndian, &attrNameSize)
+        attrName = string(p.Next(int(attrNameSize)))
+
+        binary.Read(p, binary.BigEndian, &attrType)
+
+        log.Println(attrName, attrType)
+
+        switch int(attrType) {
+        case 1: // LWES_U_INT_16_TOKEN
+        case 2: // LWES_INT_16_TOKEN
+        case 3: // LWES_U_INT_32_TOKEN
+        case 4: // LWES_INT_32_TOKEN
+        case 5: // LWES_STRING_TOKEN
+        case 6: // LWES_IP_ADDR_TOKEN
+        case 7: // LWES_INT_64_TOKEN
+        case 8: // LWES_U_INT_64_TOKEN
+        case 9: // LWES_BOOLEAN_TOKEN
+        }
+    }
 }
