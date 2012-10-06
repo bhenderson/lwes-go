@@ -19,10 +19,12 @@ const (
     MAX_MSG_SIZE = 65507
 )
 
+// http://golang.org/doc/articles/json_and_go.html
+type eventAttrs map[string]interface{}
+
 type Event struct {
     name string
-    // http://golang.org/doc/articles/json_and_go.html
-    attributes map[string]interface{}
+    attributes eventAttrs
 }
 
 // an action is a listener callback
@@ -72,7 +74,7 @@ func Listener(laddr *net.UDPAddr, callback listenerAction) {
 
 // NewEvent returns an initialized Event
 func NewEvent() Event {
-    return Event{attributes: make(map[string]interface{})}
+    return Event{attributes: make(eventAttrs)}
 }
 
 func deserializeEvent(event *Event, buf []byte) {
@@ -151,7 +153,7 @@ func (e Event) Name() string {
 }
 
 // Iterator interface
-func (e Event) Iter() map[string]interface{} {
+func (e Event) Iter() eventAttrs {
     return e.attributes
 }
 
