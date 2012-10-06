@@ -76,6 +76,8 @@ func NewEvent() Event {
 }
 
 func deserializeEvent(event *Event, buf []byte) {
+    // TODO should the interface for this func be different, ie, should it implement
+    // Writer?
     p := bytes.NewBuffer(buf)
 
     var nameSize byte
@@ -104,6 +106,7 @@ func deserializeEvent(event *Event, buf []byte) {
         var attrType byte
 
         binary.Read(p, binary.BigEndian, &attrNameSize)
+        // TODO should we camelCase attrName?
         attrName = string(p.Next(int(attrNameSize)))
 
         binary.Read(p, binary.BigEndian, &attrType)
@@ -128,7 +131,7 @@ func deserializeEvent(event *Event, buf []byte) {
             event.attributes[attrName] = string(p.Next(int(tmpUint16)))
         case 6: // LWES_IP_ADDR_TOKEN
             tmpIp := p.Next(4)
-            // not user if this is completely accurate
+            // not sure if this is completely accurate
             event.attributes[attrName] = net.IPv4(tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0])
         case 7: // LWES_INT_64_TOKEN
             binary.Read(p, binary.BigEndian, &tmpInt64)
@@ -140,4 +143,19 @@ func deserializeEvent(event *Event, buf []byte) {
             event.attributes[attrName] = 1 == p.Next(1)[0]
         }
     }
+}
+
+// Name returns the name or class of an event. This is separate from an attribute
+func (e Event) Name() string {
+    return e.name
+}
+
+// Iterator interface
+func (e Event) Iter() map[string]interface{} {
+    return e.attributes
+}
+
+// Get an attribute
+func (e Event) Get(s string) interface{} {
+    return e.attributes[s]
 }
