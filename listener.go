@@ -2,7 +2,7 @@ package lwes
 
 import (
     "net"
-    "log"
+    "fmt"
     "time"
     "bytes"
     "encoding/binary"
@@ -30,51 +30,99 @@ type Event struct {
 // an action is a listener callback
 type listenerAction func(event *Event)
 
-//Listener starts listening on ip_addr and port
-func Listener(laddr *net.UDPAddr, callback listenerAction) {
-    // pointless if no callback func
-    if callback == nil {
-        return
+type Listener struct {
+    ip net.IP
+    port int
+    iface *net.Interface
+    socket *net.UDPConn
+}
+
+// NewListener creates a new Listener and binds to ip and port and iface
+func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, error) {
+    var laddr net.IP
+    var ifi *net.Interface
+
+    switch t := ip.(type) {
+    default:
+        return nil, fmt.Errorf("ip is invalid type %T", t)
+    case string:
+        laddr = net.ParseIP(t)
+    case net.IP:
+        laddr = t
     }
 
+    if iface != nil {
+        ifi = iface[0]
+    }
+
+    l := &Listener{ip: laddr, port: port, iface: ifi}
+
+    err := l.Bind()
+
+    if err != nil {
+        return nil, err
+    }
+
+    return l, nil
+}
+
+//Bind starts listening on ip and port
+func (l *Listener) Bind() error {
     var socket *net.UDPConn
     var err error
 
-    if laddr.IP.IsMulticast() {
-        socket, err = net.ListenMulticastUDP("udp4", nil, laddr)
+    laddr := &net.UDPAddr{
+        IP: l.ip,
+        Port: l.port,
+    }
+
+    if l.ip.IsMulticast() {
+        socket, err = net.ListenMulticastUDP("udp4", l.iface, laddr)
     } else {
         socket, err = net.ListenUDP("udp4", laddr)
     }
 
     if err != nil {
-        log.Fatal(err)
+        return err
     }
-    defer socket.Close()
 
-    for {
-        buf := make([]byte, MAX_MSG_SIZE)
-        read, raddr, err := socket.ReadFromUDP(buf)
+    l.socket = socket
+    return nil
+}
 
-        if err != nil {
-            log.Fatal(err)
-        }
-
-        time := time.Now()
-
-        event := NewEvent()
-        event.attributes["receiptTime"] = time
-        event.attributes["senderIp"]    = raddr.IP
-        event.attributes["senderPort"]  = raddr.Port
-
-        deserializeEvent(&event, buf[:read])
-
-        callback(&event)
+func (l *Listener) Close() {
+    if l.socket != nil {
+        l.socket.Close()
     }
 }
 
+func (l *Listener) Recv() (*Event, error) {
+    if l.socket == nil {
+        return nil, fmt.Errorf("socket is not bound")
+    }
+
+    buf := make([]byte, MAX_MSG_SIZE)
+    read, raddr, err := l.socket.ReadFromUDP(buf)
+
+    if err != nil {
+        return nil, err
+    }
+
+    time := time.Now()
+
+    event := NewEvent()
+    event.attributes["receiptTime"] = time
+    event.attributes["senderIp"]    = raddr.IP
+    event.attributes["senderPort"]  = raddr.Port
+
+    deserializeEvent(event, buf[:read])
+
+    return event, nil
+}
+
 // NewEvent returns an initialized Event
-func NewEvent() Event {
-    return Event{attributes: make(eventAttrs)}
+func NewEvent() *Event {
+    return &Event{attributes: make(eventAttrs)}
 }
 
 func deserializeEvent(event *Event, buf []byte) {
@@ -148,16 +196,16 @@ func deserializeEvent(event *Event, buf []byte) {
 }
 
 // Name returns the name or class of an event. This is separate from an attribute
-func (e Event) Name() string {
+func (e *Event) Name() string {
     return e.name
 }
 
 // Iterator interface
-func (e Event) Iter() eventAttrs {
+func (e *Event) Iter() eventAttrs {
     return e.attributes
 }
 
 // Get an attribute
-func (e Event) Get(s string) interface{} {
+func (e *Event) Get(s string) interface{} {
     return e.attributes[s]
 }
