@@ -57,7 +57,7 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
 
     l := &Listener{ip: laddr, port: port, iface: ifi}
 
-    err := l.Bind()
+    err := l.bind()
 
     if err != nil {
         return nil, err
@@ -66,8 +66,8 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
     return l, nil
 }
 
-//Bind starts listening on ip and port
-func (l *Listener) Bind() error {
+//bind starts listening on ip and port
+func (l *Listener) bind() error {
     var socket *net.UDPConn
     var err error
 
@@ -90,12 +90,14 @@ func (l *Listener) Bind() error {
     return nil
 }
 
+// Close closes the socket. Make sure to call this if calling bind explicitely.
 func (l *Listener) Close() {
     if l.socket != nil {
         l.socket.Close()
     }
 }
 
+// Recv receives an event
 func (l *Listener) Recv() (*Event, error) {
     if l.socket == nil {
         return nil, fmt.Errorf("socket is not bound")
