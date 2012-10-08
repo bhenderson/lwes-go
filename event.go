@@ -52,9 +52,15 @@ func (event *Event) ToBytes() ([]byte, error) {
         return writeAttr( len(s), []byte(s) ) && writeAttr(i, d)
     }
 
-    if !write( byte(len(event.Name()))       ) { return nil, err }
-    if !write( []byte(event.Name())          ) { return nil, err }
-    if !write( uint16(len(event.attributes)) ) { return nil, err }
+    if ! (
+        // length of event name
+        write( byte(len(event.Name()))       ) &&
+        // event name
+        write( []byte(event.Name())          ) &&
+        // num attributes
+        write( uint16(len(event.attributes)) ) ) {
+            return nil, err
+    }
 
     for key := range event.attributes {
         switch v := event.attributes[key].(type) {
