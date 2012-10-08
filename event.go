@@ -39,6 +39,7 @@ func (event *Event) ToBytes() ([]byte, error) {
     buf := new(bytes.Buffer)
     var err error
 
+    // TODO how do these functions effect memory?
     write := func(d interface{}) bool {
         err = binary.Write(buf, binary.BigEndian, d)
         return err == nil
@@ -48,6 +49,7 @@ func (event *Event) ToBytes() ([]byte, error) {
         return write(byte(i)) && write(d)
     }
 
+    // write attribute name, attribute type (as an int), attribute value
     writePair := func(s string, i int, d interface{}) bool {
         return writeAttr( len(s), []byte(s) ) && writeAttr(i, d)
     }
