@@ -4,8 +4,6 @@ import (
     "net"
     "fmt"
     "time"
-    "bytes"
-    "encoding/binary"
 )
 
 const (
@@ -19,23 +17,14 @@ const (
     MAX_MSG_SIZE = 65507
 )
 
-// http://golang.org/doc/articles/json_and_go.html
-type eventAttrs map[string]interface{}
-
-type Event struct {
-    name string
-    attributes eventAttrs
-}
-
-// an action is a listener callback
-type listenerAction func(event *Event)
-
 type Listener struct {
-    ip net.IP
-    port int
-    iface *net.Interface
+    IP net.IP
+    Port int
+    Iface *net.Interface
     socket *net.UDPConn
 }
+
+type listenerAction func(*Event, error)
 
 // NewListener creates a new Listener and binds to ip and port and iface
 func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, error) {
@@ -55,7 +44,7 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
         ifi = iface[0]
     }
 
-    l := &Listener{ip: laddr, port: port, iface: ifi}
+    l := &Listener{IP: laddr, Port: port, Iface: ifi}
 
     err := l.bind()
 
@@ -66,35 +55,18 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
     return l, nil
 }
 
-//bind starts listening on ip and port
-func (l *Listener) bind() error {
-    var socket *net.UDPConn
-    var err error
-
-    laddr := &net.UDPAddr{
-        IP: l.ip,
-        Port: l.port,
-    }
-
-    if l.ip.IsMulticast() {
-        socket, err = net.ListenMulticastUDP("udp4", l.iface, laddr)
-    } else {
-        socket, err = net.ListenUDP("udp4", laddr)
-    }
-
-    if err != nil {
-        return err
-    }
-
-    l.socket = socket
-    return nil
-}
-
 // Close closes the socket. Make sure to call this if calling bind explicitely.
 func (l *Listener) Close() {
     if l.socket != nil {
         l.socket.Close()
     }
+}
+
+// Each takes a listenerAction and gives it an *Event. See listenerAction.
+func (l *Listener) Each(action listenerAction) {
+    defer l.Close()
+
+    for { action(l.Recv()) }
 }
 
 // Recv receives an event
@@ -117,97 +89,31 @@ func (l *Listener) Recv() (*Event, error) {
     event.attributes["senderIp"]    = raddr.IP
     event.attributes["senderPort"]  = raddr.Port
 
-    deserializeEvent(event, buf[:read])
+    event.fromBytes(buf[:read])
 
     return event, nil
 }
 
-// NewEvent returns an initialized Event
-func NewEvent() *Event {
-    return &Event{attributes: make(eventAttrs)}
-}
+//bind starts listening on ip and port
+func (l *Listener) bind() error {
+    var socket *net.UDPConn
+    var err error
 
-func deserializeEvent(event *Event, buf []byte) {
-    // TODO should the interface for this func be different, ie, should it implement
-    // Writer?
-    p := bytes.NewBuffer(buf)
-
-    var nameSize byte
-    binary.Read(p, binary.BigEndian, &nameSize)
-
-    event.name = string(p.Next(int(nameSize)))
-
-    var attrSize uint16
-    binary.Read(p, binary.BigEndian, &attrSize)
-
-    // temporary types
-    // var tmpByte   byte
-    var tmpUint16 uint16
-    var tmpInt16  int16
-    var tmpUint32 uint32
-    var tmpInt32  int32
-    var tmpUint64 uint64
-    var tmpInt64  int64
-    // var tmpBool   byte
-    // var tmpIpaddr net.IP
-    // var tmpString string
-
-    for i:=0; i < int(attrSize); i++ {
-        var attrNameSize byte
-        var attrName string
-        var attrType byte
-
-        binary.Read(p, binary.BigEndian, &attrNameSize)
-        // TODO should we camelCase attrName?
-        attrName = string(p.Next(int(attrNameSize)))
-
-        binary.Read(p, binary.BigEndian, &attrType)
-
-        // log.Println(attrName, attrType)
-
-        switch int(attrType) {
-        case 1: // LWES_U_INT_16_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpUint16)
-            event.attributes[attrName] = tmpUint16
-        case 2: // LWES_INT_16_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpInt16)
-            event.attributes[attrName] = tmpInt16
-        case 3: // LWES_U_INT_32_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpUint32)
-            event.attributes[attrName] = tmpUint32
-        case 4: // LWES_INT_32_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpInt32)
-            event.attributes[attrName] = tmpInt32
-        case 5: // LWES_STRING_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpUint16)
-            event.attributes[attrName] = string(p.Next(int(tmpUint16)))
-        case 6: // LWES_IP_ADDR_TOKEN
-            tmpIp := p.Next(4)
-            // not sure if this is completely accurate
-            event.attributes[attrName] = net.IPv4(tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0])
-        case 7: // LWES_INT_64_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpInt64)
-            event.attributes[attrName] = tmpInt64
-        case 8: // LWES_U_INT_64_TOKEN
-            binary.Read(p, binary.BigEndian, &tmpUint64)
-            event.attributes[attrName] = tmpUint64
-        case 9: // LWES_BOOLEAN_TOKEN
-            event.attributes[attrName] = 1 == p.Next(1)[0]
-        }
+    laddr := &net.UDPAddr{
+        IP: l.IP,
+        Port: l.Port,
     }
-}
 
-// Name returns the name or class of an event. This is separate from an attribute
-func (e *Event) Name() string {
-    return e.name
-}
+    if l.IP.IsMulticast() {
+        socket, err = net.ListenMulticastUDP("udp4", l.Iface, laddr)
+    } else {
+        socket, err = net.ListenUDP("udp4", laddr)
+    }
 
-// Iterator interface
-func (e *Event) Iter() eventAttrs {
-    return e.attributes
-}
+    if err != nil {
+        return err
+    }
 
-// Get an attribute
-func (e *Event) Get(s string) interface{} {
-    return e.attributes[s]
+    l.socket = socket
+    return nil
 }
