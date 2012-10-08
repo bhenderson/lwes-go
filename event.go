@@ -35,7 +35,65 @@ func (e *Event) Get(s string) interface{} {
     return e.attributes[s]
 }
 
-func (event *Event) fromBytes(buf []byte) {
+func (event *Event) ToBytes() ([]byte, error) {
+    buf := new(bytes.Buffer)
+    var err error
+
+    write := func(d interface{}) bool {
+        err = binary.Write(buf, binary.BigEndian, d)
+        return err == nil
+    }
+
+    writeAttr := func(i int, d interface{}) bool {
+        return write(byte(i)) && write(d)
+    }
+
+    writePair := func(s string, i int, d interface{}) bool {
+        return writeAttr( len(s), []byte(s) ) && writeAttr(i, d)
+    }
+
+    if !write( byte(len(event.Name()))       ) { return nil, err }
+    if !write( []byte(event.Name())          ) { return nil, err }
+    if !write( uint16(len(event.attributes)) ) { return nil, err }
+
+    for key := range event.attributes {
+        switch v := event.attributes[key].(type) {
+        default:
+            // unknown type. skip it.
+        case uint16:
+            writePair( key, 1, v )
+        case int16:
+            writePair( key, 2, v )
+        case uint32:
+            writePair( key, 3, v )
+        case int32:
+            writePair( key, 4, v )
+        case string:
+            if writePair( key, 5, uint16(len(v)) ) {
+                write( []byte(v) )
+            }
+        case net.IP:
+            val := v[len(v) - 4:]
+            writePair( key, 6, []byte{val[3],val[2],val[1],val[0]} )
+        case uint64:
+            writePair( key, 7, v )
+        case int64:
+            writePair( key, 8, v )
+        case int:
+            writePair( key, 8, int64(v) )
+        case bool:
+            var b byte
+            if v { b = 1 } else { b = 0 }
+            writePair( key, 9, b )
+        }
+
+        if err != nil { return nil, err }
+    }
+
+    return buf.Bytes(), nil
+}
+
+func (event *Event) FromBytes(buf []byte) {
     p := bytes.NewBuffer(buf)
 
     var nameSize byte
