@@ -8,6 +8,7 @@ import (
 
 const (
     /*
+        from lwes c library:
         maximum datagram size for UDP is 64K minus IP layer overhead which is
         20 bytes for IP header, and 8 bytes for UDP header, so this value
         should be
