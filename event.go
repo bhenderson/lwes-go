@@ -4,6 +4,8 @@ import (
     "bytes"
     "encoding/binary"
     "net"
+    "fmt"
+    "encoding/json"
 )
 
 // http://golang.org/doc/articles/json_and_go.html
@@ -164,4 +166,28 @@ func (event *Event) FromBytes(buf []byte) {
             event.attributes[attrName] = 1 == p.Next(1)[0]
         }
     }
+}
+
+// PrettyString returns a "pretty" formatted string.
+func (e *Event) PrettyString() string {
+    var buf bytes.Buffer
+
+    buf.WriteString(e.Name())
+    buf.WriteString("\n")
+
+    for key := range e.attributes {
+        buf.WriteString(key)
+        buf.WriteString(": ")
+        buf.WriteString(fmt.Sprintln(e.attributes[key]))
+    }
+
+    return buf.String()
+}
+
+// MarshalJSON returns a json byte array of name:attributes
+// net.IP is base64 encoded
+func (e *Event) MarshalJSON() (data []byte, err error) {
+    m := make(eventAttrs)
+    m[e.Name()] = e.attributes
+    return json.Marshal(m)
 }
