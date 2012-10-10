@@ -13,18 +13,13 @@ type eventAttrs map[string]interface{}
 
 type Event struct {
     // TODO should this be a normal struct?
-    name string
+    Name string
     attributes eventAttrs
 }
 
 // NewEvent returns an initialized Event
 func NewEvent() *Event {
     return &Event{attributes: make(eventAttrs)}
-}
-
-// Name returns the name or class of an event. This is separate from an attribute
-func (e *Event) Name() string {
-    return e.name
 }
 
 // Iterator interface
@@ -35,6 +30,14 @@ func (e *Event) Iterator() eventAttrs {
 // Get an attribute
 func (e *Event) Get(s string) interface{} {
     return e.attributes[s]
+}
+
+func (e *Event) SetAttribute(name string, d interface{}) {
+    // TODO validate types
+    switch v := d.(type) {
+    default:
+        e.attributes[name] = v
+    }
 }
 
 func (event *Event) ToBytes() ([]byte, error) {
@@ -58,9 +61,9 @@ func (event *Event) ToBytes() ([]byte, error) {
 
     if ! (
         // length of event name
-        write( byte(len(event.Name()))       ) &&
+        write( byte(len(event.Name))       ) &&
         // event name
-        write( []byte(event.Name())          ) &&
+        write( []byte(event.Name)          ) &&
         // num attributes
         write( uint16(len(event.attributes)) ) ) {
             return nil, err
@@ -121,7 +124,7 @@ func (event *Event) FromBytes(buf []byte) {
 
     var nameSize byte
     read(&nameSize)
-    event.name = string(p.Next(int(nameSize)))
+    event.Name = string(p.Next(int(nameSize)))
 
     var attrSize uint16
     read(&attrSize)
@@ -172,7 +175,7 @@ func (event *Event) FromBytes(buf []byte) {
 func (e *Event) PrettyString() string {
     var buf bytes.Buffer
 
-    buf.WriteString(e.Name())
+    buf.WriteString(e.Name)
     buf.WriteString("\n")
 
     for key := range e.attributes {
@@ -188,6 +191,6 @@ func (e *Event) PrettyString() string {
 // net.IP is base64 encoded
 func (e *Event) MarshalJSON() (data []byte, err error) {
     m := make(eventAttrs)
-    m[e.Name()] = e.attributes
+    m[e.Name] = e.attributes
     return json.Marshal(m)
 }

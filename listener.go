@@ -19,7 +19,7 @@ const (
 )
 
 type Listener struct {
-    IP net.IP
+    IP *net.IP
     Port int
     Iface *net.Interface
     socket *net.UDPConn
@@ -29,16 +29,12 @@ type listenerAction func(*Event, error)
 
 // NewListener creates a new Listener and binds to ip and port and iface
 func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, error) {
-    var laddr net.IP
     var ifi *net.Interface
 
-    switch t := ip.(type) {
-    default:
-        return nil, fmt.Errorf("ip is invalid type %T", t)
-    case string:
-        laddr = net.ParseIP(t)
-    case net.IP:
-        laddr = t
+    laddr, err := toIP(ip)
+
+    if err != nil {
+        return nil, err
     }
 
     if iface != nil {
@@ -47,7 +43,7 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
 
     l := &Listener{IP: laddr, Port: port, Iface: ifi}
 
-    err := l.bind()
+    err = l.bind()
 
     if err != nil {
         return nil, err
@@ -102,7 +98,7 @@ func (l *Listener) bind() error {
     var err error
 
     laddr := &net.UDPAddr{
-        IP: l.IP,
+        IP: *l.IP,
         Port: l.Port,
     }
 
