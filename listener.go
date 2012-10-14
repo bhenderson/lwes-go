@@ -82,7 +82,7 @@ func (l *Listener) Recv() (*Event, error) {
     time := time.Now()
 
     event := NewEvent()
-    event.FromBytes(buf[:read])
+    event.fromBytes(buf[:read])
 
     event.attributes["receiptTime"] = time
     event.attributes["senderIp"]    = raddr.IP.To16()

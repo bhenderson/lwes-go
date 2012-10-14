@@ -40,73 +40,95 @@ func (e *Event) SetAttribute(name string, d interface{}) {
     }
 }
 
-func (event *Event) ToBytes() ([]byte, error) {
+func (event *Event) toBytes() ([]byte, error) {
     buf := new(bytes.Buffer)
-    var err error
 
-    // TODO how do these functions effect memory?
-    write := func(d interface{}) bool {
-        err = binary.Write(buf, binary.BigEndian, d)
-        return err == nil
+    // TODO write errors
+    write := func(d interface{}) {
+        binary.Write(buf, binary.BigEndian, d)
     }
 
-    writeAttr := func(i int, d interface{}) bool {
-        return write(byte(i)) && write(d)
+    writeKey := func(k string) {
+        write(byte(len(k)))
+        buf.Write([]byte(k))
     }
 
-    // write attribute name, attribute type (as an int), attribute value
-    writePair := func(s string, i int, d interface{}) bool {
-        return writeAttr( len(s), []byte(s) ) && writeAttr(i, d)
+    writeAttr := func(k string, t int, d interface{}) {
+        writeKey(k)
+        write(byte(t))
+        write(d)
     }
 
-    if ! (
-        // length of event name
-        write( byte(len(event.Name))       ) &&
-        // event name
-        write( []byte(event.Name)          ) &&
-        // num attributes
-        write( uint16(len(event.attributes)) ) ) {
-            return nil, err
-    }
+    // write name length
+    // write name
+    writeKey(event.Name)
+    // write num attributes
+    write(uint16(len(event.attributes)))
 
     for key := range event.attributes {
         switch v := event.attributes[key].(type) {
         default:
-            // unknown type. skip it.
-        case uint16:
-            writePair( key, 1, v )
-        case int16:
-            writePair( key, 2, v )
-        case uint32:
-            writePair( key, 3, v )
-        case int32:
-            writePair( key, 4, v )
+            // fmt.Printf("unknown key type: %T %#v\n", v,v)
+        case uint8:
+            writeAttr(key, 1, uint16(v))
+        case *uint8:
+            writeAttr(key, 1, uint16(*v))
+        case uint16, *uint16:
+            writeAttr(key, 1, v)
+        case int8:
+            writeAttr(key, 2, int16(v))
+        case *int8:
+            writeAttr(key, 2, int16(*v))
+        case int16, *int16:
+            writeAttr(key, 2, v)
+        case uint32, *uint32:
+            writeAttr(key, 3, v)
+        case int32, *int32:
+            writeAttr(key, 4, v)
         case string:
-            if writePair( key, 5, uint16(len(v)) ) {
-                write( []byte(v) )
-            }
+            writeAttr(key, 5, uint16(len(v)))
+            buf.Write([]byte(v))
+        case *string:
+            writeAttr(key, 5, uint16(len(*v)))
+            buf.Write([]byte(*v))
         case net.IP:
-            val := v[len(v) - 4:]
-            writePair( key, 6, []byte{val[3],val[2],val[1],val[0]} )
-        case uint64:
-            writePair( key, 7, v )
-        case int64:
-            writePair( key, 8, v )
-        case int:
-            writePair( key, 8, int64(v) )
+            writeKey(key)
+            write(byte(6))
+            tmpIP := v.To4()
+            buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+        case *net.IP:
+            writeKey(key)
+            write(byte(6))
+            tmpIP := v.To4()
+            buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+        case int64, *int64:
+            writeAttr(key, 7, v)
+        case uint64, *uint64:
+            writeAttr(key, 8, v)
         case bool:
-            var b byte
+            var b int
             if v { b = 1 } else { b = 0 }
-            writePair( key, 9, b )
+            writeAttr(key, 9, byte(b))
+        case *bool:
+            var b int
+            if *v { b = 1 } else { b = 0 }
+            writeAttr(key, 9, byte(b))
+        // int and uint might be 32 or 64
+        case int:
+            writeAttr(key, 7, int64(v))
+        case *int:
+            writeAttr(key, 7, int64(*v))
+        case uint:
+            writeAttr(key, 8, uint64(v))
+        case *uint:
+            writeAttr(key, 8, uint64(*v))
         }
-
-        if err != nil { return nil, err }
     }
 
     return buf.Bytes(), nil
 }
 
-func (event *Event) FromBytes(buf []byte) {
+func (event *Event) fromBytes(buf []byte) {
     p := bytes.NewBuffer(buf)
 
     // TODO read errors
@@ -181,6 +203,7 @@ func (e *Event) PrettyString() string {
     for key := range e.attributes {
         buf.WriteString(key)
         buf.WriteString(": ")
+        // gah
         buf.WriteString(fmt.Sprintln(e.attributes[key]))
     }
 

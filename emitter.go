@@ -6,17 +6,20 @@ import (
 )
 
 type Emitter struct {
-    Address string
-    Port int
+    Raddr *net.UDPAddr
     Heartbeat int8
     TTL int8
     Iface *net.Interface
-    socket net.Conn
+    socket *net.UDPConn
 }
 
 func NewEmitter(ip string, port int, heartbeat int8, ttl int8, iface *net.Interface) (*Emitter, error) {
-    e := &Emitter{Address: ip, Port: port, Heartbeat: heartbeat, TTL: ttl, Iface: iface}
-    err := e.dial()
+    raddr := &net.UDPAddr{
+        IP: net.ParseIP(ip),
+        Port: port,
+    }
+    e := &Emitter{Raddr: raddr, Heartbeat: heartbeat, TTL: ttl, Iface: iface}
+    err := e.setSocket()
 
     if err != nil {
         return nil, err
@@ -25,8 +28,8 @@ func NewEmitter(ip string, port int, heartbeat int8, ttl int8, iface *net.Interf
     return e, nil
 }
 
-func (e *Emitter) dial() error {
-    soc, err := net.Dial("udp", net.JoinHostPort(e.Address, fmt.Sprintf("%d", e.Port)))
+func (e *Emitter) setSocket() error {
+    soc, err := net.ListenUDP("udp", e.Raddr)
 
     if err != nil {
         return err
@@ -38,16 +41,14 @@ func (e *Emitter) dial() error {
 }
 
 func (e *Emitter) Emit(event *Event) error {
-    b, err := event.ToBytes()
+    b, err := event.toBytes()
 
     if err != nil {
         return err
     }
 
-    i, err := e.socket.Write(b)
-
-    fmt.Println(i)
-    fmt.Println(string(b))
+    fmt.Printf("sending: %v\n", b)
+    _, err = e.socket.WriteToUDP(b, e.Raddr)
 
     return err
 }
