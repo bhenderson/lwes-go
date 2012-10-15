@@ -18,8 +18,12 @@ type Event struct {
 }
 
 // NewEvent returns an initialized Event
-func NewEvent() *Event {
-    return &Event{attributes: make(eventAttrs)}
+func NewEvent(argv...string) *Event {
+    e := &Event{attributes: make(eventAttrs)}
+    if argv != nil {
+        e.Name = argv[0]
+    }
+    return e
 }
 
 // Iterator interface
