@@ -38,6 +38,7 @@ func (e *Event) Get(s string) interface{} {
 
 func (e *Event) SetAttribute(name string, d interface{}) {
     // TODO validate types
+    // Should we validate string length?
     switch v := d.(type) {
     default:
         e.attributes[name] = v
@@ -46,28 +47,35 @@ func (e *Event) SetAttribute(name string, d interface{}) {
 
 func (event *Event) toBytes() ([]byte, error) {
     buf := new(bytes.Buffer)
+    var err error
 
     // TODO write errors
-    write := func(d interface{}) {
-        binary.Write(buf, binary.BigEndian, d)
+    write := func(d interface{}) bool {
+        err = binary.Write(buf, binary.BigEndian, d)
+        return err == nil
     }
 
-    writeKey := func(k string) {
-        write(byte(len(k)))
-        buf.Write([]byte(k))
+    writeKey := func(k string) bool {
+        l := len(k)
+        if l > MAX_SHORT_STRING_SIZE {
+            err = fmt.Errorf("key length exceeds MAX_SHORT_STRING_SIZE(%d)", MAX_SHORT_STRING_SIZE)
+            return false
+        }
+        if !write(byte(l)) { return false }
+        _, err = buf.Write([]byte(k))
+        return err == nil
     }
 
-    writeAttr := func(k string, t int, d interface{}) {
-        writeKey(k)
-        write(byte(t))
-        write(d)
+    writeAttr := func(k string, t int, d interface{}) bool {
+        return writeKey(k) && write(byte(t)) && write(d)
     }
 
     // write name length
     // write name
-    writeKey(event.Name)
     // write num attributes
-    write(uint16(len(event.attributes)))
+    if ! (writeKey(event.Name) && write(uint16(len(event.attributes)))) {
+        return nil, err
+    }
 
     for key := range event.attributes {
         switch v := event.attributes[key].(type) {
@@ -90,21 +98,23 @@ func (event *Event) toBytes() ([]byte, error) {
         case int32, *int32:
             writeAttr(key, 4, v)
         case string:
-            writeAttr(key, 5, uint16(len(v)))
-            buf.Write([]byte(v))
+            if writeAttr(key, 5, uint16(len(v))) {
+                buf.Write([]byte(v))
+            }
         case *string:
-            writeAttr(key, 5, uint16(len(*v)))
-            buf.Write([]byte(*v))
+            if writeAttr(key, 5, uint16(len(*v))) {
+                buf.Write([]byte(*v))
+            }
         case net.IP:
-            writeKey(key)
-            write(byte(6))
-            tmpIP := v.To4()
-            buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            if writeKey(key) && write(byte(6)) {
+                tmpIP := v.To4()
+                buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            }
         case *net.IP:
-            writeKey(key)
-            write(byte(6))
-            tmpIP := v.To4()
-            buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            if writeKey(key) && write(byte(6)) {
+                tmpIP := v.To4()
+                buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            }
         case int64, *int64:
             writeAttr(key, 7, v)
         case uint64, *uint64:
@@ -127,6 +137,8 @@ func (event *Event) toBytes() ([]byte, error) {
         case *uint:
             writeAttr(key, 8, uint64(*v))
         }
+
+        if err != nil { return nil, err }
     }
 
     return buf.Bytes(), nil

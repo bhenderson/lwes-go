@@ -168,3 +168,29 @@ func TestEventSerializer(t *testing.T) {
     assertField("f13p", f13)
     assertField("f14p", uint16(f14))
 }
+
+func TestEventSerializerNameLength(t *testing.T) {
+    e := NewEvent()
+    name := "aaaaaaaa"
+    for ;len(name) <= MAX_SHORT_STRING_SIZE; { name += "aaaaaaaa" } // long string
+    e.Name = name
+    _, err := e.toBytes()
+
+    if err == nil {
+        t.Fatalf("expected name length (%d) to err", len(name))
+    }
+}
+
+func TestEventSerializerKeyLength(t *testing.T) {
+    e := NewEvent("Event")
+    key := "aaaaaaaa"
+    for ;len(key) <= MAX_SHORT_STRING_SIZE; { key += "aaaaaaaa" } // long string
+    // should SetAttribute check length?
+    e.SetAttribute(key, "too long")
+
+    _, err := e.toBytes()
+
+    if err == nil {
+        t.Fatalf("expected key length (%d) to err", len(key))
+    }
+}
