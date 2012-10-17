@@ -66,8 +66,8 @@ func (event *Event) toBytes() ([]byte, error) {
         return err == nil
     }
 
-    writeAttr := func(k string, t int, d interface{}) bool {
-        return writeKey(k) && write(byte(t)) && write(d)
+    writeAttr := func(k string, t byte, d interface{}) bool {
+        return writeKey(k) && write(t) && write(d)
     }
 
     // write name length
@@ -106,12 +106,12 @@ func (event *Event) toBytes() ([]byte, error) {
                 buf.Write([]byte(*v))
             }
         case net.IP:
-            if writeKey(key) && write(byte(LWES_IP_ADDR_TOKEN)) {
+            if writeKey(key) && write(LWES_IP_ADDR_TOKEN) {
                 tmpIP := v.To4()
                 buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
             }
         case *net.IP:
-            if writeKey(key) && write(byte(LWES_IP_ADDR_TOKEN)) {
+            if writeKey(key) && write(LWES_IP_ADDR_TOKEN) {
                 tmpIP := v.To4()
                 buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
             }
@@ -177,7 +177,7 @@ func (event *Event) fromBytes(buf []byte) {
 
         read(&attrType)
 
-        switch int(attrType) {
+        switch attrType {
         case LWES_U_INT_16_TOKEN:
             read(&tmpUint16)
             event.attributes[attrName] = tmpUint16

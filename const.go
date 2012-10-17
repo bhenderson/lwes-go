@@ -15,7 +15,7 @@ const (
 
 const (
     // type map
-    _ = iota
+    _ byte = iota
     LWES_U_INT_16_TOKEN
     LWES_INT_16_TOKEN
     LWES_U_INT_32_TOKEN
