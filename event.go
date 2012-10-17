@@ -123,13 +123,13 @@ func (event *Event) toBytes() ([]byte, error) {
         case uint64, *uint64:
             writeAttr(key, LWES_U_INT_64_TOKEN, v)
         case bool:
-            var b int
+            var b byte
             if v { b = 1 } else { b = 0 }
-            writeAttr(key, LWES_BOOLEAN_TOKEN, byte(b))
+            writeAttr(key, LWES_BOOLEAN_TOKEN, b)
         case *bool:
-            var b int
+            var b byte
             if *v { b = 1 } else { b = 0 }
-            writeAttr(key, LWES_BOOLEAN_TOKEN, byte(b))
+            writeAttr(key, LWES_BOOLEAN_TOKEN, b)
         // int and uint might be 32 or 64
         case int:
             writeAttr(key, LWES_INT_64_TOKEN, int64(v))
@@ -140,10 +140,9 @@ func (event *Event) toBytes() ([]byte, error) {
         case *uint:
             writeAttr(key, LWES_U_INT_64_TOKEN, uint64(*v))
         }
-
-        if err != nil { return nil, err }
     }
 
+    if err != nil { return nil, err }
     return buf.Bytes(), nil
 }
 
