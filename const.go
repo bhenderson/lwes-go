@@ -13,3 +13,16 @@ const (
     MAX_SHORT_STRING_SIZE = 255
 )
 
+const (
+    // type map
+    _ = iota
+    LWES_U_INT_16_TOKEN
+    LWES_INT_16_TOKEN
+    LWES_U_INT_32_TOKEN
+    LWES_INT_32_TOKEN
+    LWES_STRING_TOKEN
+    LWES_IP_ADDR_TOKEN
+    LWES_INT_64_TOKEN
+    LWES_U_INT_64_TOKEN
+    LWES_BOOLEAN_TOKEN
+)

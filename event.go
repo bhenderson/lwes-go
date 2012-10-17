@@ -82,60 +82,60 @@ func (event *Event) toBytes() ([]byte, error) {
         default:
             // fmt.Printf("unknown key type: %T %#v\n", v,v)
         case uint8:
-            writeAttr(key, 1, uint16(v))
+            writeAttr(key, LWES_U_INT_16_TOKEN, uint16(v))
         case *uint8:
-            writeAttr(key, 1, uint16(*v))
+            writeAttr(key, LWES_U_INT_16_TOKEN, uint16(*v))
         case uint16, *uint16:
-            writeAttr(key, 1, v)
+            writeAttr(key, LWES_U_INT_16_TOKEN, v)
         case int8:
-            writeAttr(key, 2, int16(v))
+            writeAttr(key, LWES_INT_16_TOKEN, int16(v))
         case *int8:
-            writeAttr(key, 2, int16(*v))
+            writeAttr(key, LWES_INT_16_TOKEN, int16(*v))
         case int16, *int16:
-            writeAttr(key, 2, v)
+            writeAttr(key, LWES_INT_16_TOKEN, v)
         case uint32, *uint32:
-            writeAttr(key, 3, v)
+            writeAttr(key, LWES_U_INT_32_TOKEN, v)
         case int32, *int32:
-            writeAttr(key, 4, v)
+            writeAttr(key, LWES_INT_32_TOKEN, v)
         case string:
-            if writeAttr(key, 5, uint16(len(v))) {
+            if writeAttr(key, LWES_STRING_TOKEN, uint16(len(v))) {
                 buf.Write([]byte(v))
             }
         case *string:
-            if writeAttr(key, 5, uint16(len(*v))) {
+            if writeAttr(key, LWES_STRING_TOKEN, uint16(len(*v))) {
                 buf.Write([]byte(*v))
             }
         case net.IP:
-            if writeKey(key) && write(byte(6)) {
+            if writeKey(key) && write(byte(LWES_IP_ADDR_TOKEN)) {
                 tmpIP := v.To4()
                 buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
             }
         case *net.IP:
-            if writeKey(key) && write(byte(6)) {
+            if writeKey(key) && write(byte(LWES_IP_ADDR_TOKEN)) {
                 tmpIP := v.To4()
                 buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
             }
         case int64, *int64:
-            writeAttr(key, 7, v)
+            writeAttr(key, LWES_INT_64_TOKEN, v)
         case uint64, *uint64:
-            writeAttr(key, 8, v)
+            writeAttr(key, LWES_U_INT_64_TOKEN, v)
         case bool:
             var b int
             if v { b = 1 } else { b = 0 }
-            writeAttr(key, 9, byte(b))
+            writeAttr(key, LWES_BOOLEAN_TOKEN, byte(b))
         case *bool:
             var b int
             if *v { b = 1 } else { b = 0 }
-            writeAttr(key, 9, byte(b))
+            writeAttr(key, LWES_BOOLEAN_TOKEN, byte(b))
         // int and uint might be 32 or 64
         case int:
-            writeAttr(key, 7, int64(v))
+            writeAttr(key, LWES_INT_64_TOKEN, int64(v))
         case *int:
-            writeAttr(key, 7, int64(*v))
+            writeAttr(key, LWES_INT_64_TOKEN, int64(*v))
         case uint:
-            writeAttr(key, 8, uint64(v))
+            writeAttr(key, LWES_U_INT_64_TOKEN, uint64(v))
         case *uint:
-            writeAttr(key, 8, uint64(*v))
+            writeAttr(key, LWES_U_INT_64_TOKEN, uint64(*v))
         }
 
         if err != nil { return nil, err }
@@ -178,32 +178,32 @@ func (event *Event) fromBytes(buf []byte) {
         read(&attrType)
 
         switch int(attrType) {
-        case 1: // LWES_U_INT_16_TOKEN
+        case LWES_U_INT_16_TOKEN:
             read(&tmpUint16)
             event.attributes[attrName] = tmpUint16
-        case 2: // LWES_INT_16_TOKEN
+        case LWES_INT_16_TOKEN:
             read(&tmpInt16)
             event.attributes[attrName] = tmpInt16
-        case 3: // LWES_U_INT_32_TOKEN
+        case LWES_U_INT_32_TOKEN:
             read(&tmpUint32)
             event.attributes[attrName] = tmpUint32
-        case 4: // LWES_INT_32_TOKEN
+        case LWES_INT_32_TOKEN:
             read(&tmpInt32)
             event.attributes[attrName] = tmpInt32
-        case 5: // LWES_STRING_TOKEN
+        case LWES_STRING_TOKEN:
             read(&tmpUint16)
             event.attributes[attrName] = string(p.Next(int(tmpUint16)))
-        case 6: // LWES_IP_ADDR_TOKEN
+        case LWES_IP_ADDR_TOKEN:
             tmpIp := p.Next(4)
             // not sure if this is completely accurate
             event.attributes[attrName] = net.IPv4(tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0])
-        case 7: // LWES_INT_64_TOKEN
+        case LWES_INT_64_TOKEN:
             read(&tmpInt64)
             event.attributes[attrName] = tmpInt64
-        case 8: // LWES_U_INT_64_TOKEN
+        case LWES_U_INT_64_TOKEN:
             read(&tmpUint64)
             event.attributes[attrName] = tmpUint64
-        case 9: // LWES_BOOLEAN_TOKEN
+        case LWES_BOOLEAN_TOKEN:
             event.attributes[attrName] = 1 == p.Next(1)[0]
         }
     }
