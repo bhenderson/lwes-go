@@ -171,8 +171,7 @@ func TestEventSerializer(t *testing.T) {
 
 func TestEventSerializerNameLength(t *testing.T) {
     e := NewEvent()
-    name := "aaaaaaaa"
-    for ;len(name) <= MAX_SHORT_STRING_SIZE; { name += "aaaaaaaa" } // long string
+    name := longString(MAX_SHORT_STRING_SIZE+1)
     e.Name = name
     _, err := e.toBytes()
 
@@ -183,8 +182,8 @@ func TestEventSerializerNameLength(t *testing.T) {
 
 func TestEventSerializerKeyLength(t *testing.T) {
     e := NewEvent("Event")
-    key := "aaaaaaaa"
-    for ;len(key) <= MAX_SHORT_STRING_SIZE; { key += "aaaaaaaa" } // long string
+
+    key := longString(MAX_SHORT_STRING_SIZE+1)
     // should SetAttribute check length?
     e.SetAttribute(key, "too long")
 
@@ -193,4 +192,36 @@ func TestEventSerializerKeyLength(t *testing.T) {
     if err == nil {
         t.Fatalf("expected key length (%d) to err", len(key))
     }
+}
+
+func TestEventLength(t *testing.T) {
+    e := NewEvent("TooLong")
+
+    val := longString(MAX_MSG_SIZE+1)
+    e.SetAttribute("too_long", val)
+
+    _, err := e.toBytes()
+
+    if err == nil {
+        t.Fatalf("expected val length (%d) to err", len(val))
+    }
+}
+
+func TestEventTotalLength(t *testing.T) {
+    e := NewEvent("TotalTooLong")
+
+    e.SetAttribute("half", longString(MAX_MSG_SIZE/2))
+    e.SetAttribute("half2", longString(MAX_MSG_SIZE/2))
+
+    _, err := e.toBytes()
+
+    if err == nil {
+        t.Fatalf("expected total length to err")
+    }
+}
+
+func longString(l int) (s string) {
+    s = "a"
+    for ;len(s) <= l/2; { s += s }
+    return s+s[:l-(len(s))]
 }

@@ -143,6 +143,9 @@ func (event *Event) toBytes() ([]byte, error) {
     }
 
     if err != nil { return nil, err }
+    if len(buf.Bytes()) > MAX_MSG_SIZE {
+        return nil, fmt.Errorf("num bytes exceeds MAX_MSG_SIZE")
+    }
     return buf.Bytes(), nil
 }
 
