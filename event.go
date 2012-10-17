@@ -51,7 +51,14 @@ func (event *Event) toBytes() ([]byte, error) {
 
     // TODO write errors
     write := func(d interface{}) bool {
+        if d == nil { return true }
         err = binary.Write(buf, binary.BigEndian, d)
+        return err == nil
+    }
+
+    writeRaw := func(d...interface{}) bool {
+        if d == nil { return true }
+        _, err = buf.Write(d[0].([]byte))
         return err == nil
     }
 
@@ -66,8 +73,8 @@ func (event *Event) toBytes() ([]byte, error) {
         return err == nil
     }
 
-    writeAttr := func(k string, t byte, d interface{}) bool {
-        return writeKey(k) && write(t) && write(d)
+    writeAttr := func(k string, t byte, d interface{}, r...interface{}) bool {
+        return writeKey(k) && write(t) && write(d) && writeRaw(r...)
     }
 
     // write name length
@@ -98,22 +105,18 @@ func (event *Event) toBytes() ([]byte, error) {
         case int32, *int32:
             writeAttr(key, LWES_INT_32_TOKEN, v)
         case string:
-            if writeAttr(key, LWES_STRING_TOKEN, uint16(len(v))) {
-                buf.Write([]byte(v))
-            }
+            writeAttr(key, LWES_STRING_TOKEN, uint16(len(v)), []byte(v))
         case *string:
-            if writeAttr(key, LWES_STRING_TOKEN, uint16(len(*v))) {
-                buf.Write([]byte(*v))
-            }
+            writeAttr(key, LWES_STRING_TOKEN, uint16(len(*v)), []byte(*v))
         case net.IP:
-            if writeKey(key) && write(LWES_IP_ADDR_TOKEN) {
-                tmpIP := v.To4()
-                buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            if tmpIP := v.To4(); tmpIP != nil {
+                b := []byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]}
+                writeAttr(key, LWES_IP_ADDR_TOKEN, nil, b)
             }
         case *net.IP:
-            if writeKey(key) && write(LWES_IP_ADDR_TOKEN) {
-                tmpIP := v.To4()
-                buf.Write([]byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]})
+            if tmpIP := v.To4(); tmpIP != nil {
+                b := []byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]}
+                writeAttr(key, LWES_IP_ADDR_TOKEN, nil, b)
             }
         case int64, *int64:
             writeAttr(key, LWES_INT_64_TOKEN, v)
