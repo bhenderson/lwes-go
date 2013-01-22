@@ -16,7 +16,7 @@ var printj bool
 func init() {
     flag.Usage = usage
 
-    flag.StringVar(&addr,   "address", "127.0.0.1", "Listen Address")
+    flag.StringVar(&addr,   "address", "224.2.2.22", "Listen Address")
     flag.IntVar(   &port,   "port",    12345,       "Listen Port")
     flag.BoolVar(  &pretty, "pretty",  false,       "Pretty print event")
     flag.BoolVar(  &printj, "json",    false,       "Print event as json")
