@@ -6,12 +6,10 @@ import (
 )
 
 type Emitter struct {
-    Raddr *net.UDPAddr
     Heartbeat int8
     TTL int8
-    Iface *net.Interface
     closer chan bool
-    socket *net.UDPConn
+    socket *Conn
 }
 
 var (
@@ -20,23 +18,12 @@ var (
     heartbeatEvent = NewEvent("System::Heartbeat")
 )
 
-func NewEmitter(ip string, port int) (*Emitter, error) {
-    raddr := &net.UDPAddr{
-        IP: net.ParseIP(ip),
-        Port: port,
-    }
-    e := &Emitter{Raddr: raddr, Heartbeat: 1, TTL: 3}
-
-    soc, err := net.ListenUDP("udp4", e.Raddr)
-    if err != nil {
-        return nil, err
-    }
-
-    e.closer = make(chan bool)
-    e.socket = soc
-    e.Emit(startupEvent)
-    go e.emitHeartbeats()
-    return e, nil
+func NewEmitter(ip interface{}, port int, iface ...*net.Interface) (*Emitter, error) {
+    conn, err := NewConn(ip, port, iface...)
+    e := &Emitter{Heartbeat: 1, TTL: 3, closer: make(chan bool), socket: conn}
+    // e.Emit(startupEvent)
+    // go e.emitHeartbeats()
+    return e, err
 }
 
 func (e *Emitter) Emit(event *Event) error {
@@ -51,7 +38,7 @@ func (e *Emitter) Emit(event *Event) error {
 
     // TODO toBytes is working correctly but emitter is still broken.
     // that said, if I send eventSlice (from test) it works!
-    _, err = e.socket.WriteToUDP(b, e.Raddr)
+    _, err = e.socket.Write(b)
 
     return err
 }
