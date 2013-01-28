@@ -69,12 +69,14 @@ func (l *Listener) Recv() (*Event, error) {
 
     time := time.Now()
 
+    fmt.Printf("%#v", buf[:read])
+
     event := NewEvent()
     event.fromBytes(buf[:read])
 
-    event.attributes["receiptTime"] = time
-    event.attributes["senderIp"]    = raddr.IP.To16()
-    event.attributes["senderPort"]  = raddr.Port
+    event.Attributes["receiptTime"] = time
+    event.Attributes["senderIp"]    = raddr.IP.To16()
+    event.Attributes["senderPort"]  = raddr.Port
 
 
     return event, nil

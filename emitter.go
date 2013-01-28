@@ -46,6 +46,9 @@ func (e *Emitter) Emit(event *Event) error {
         return err
     }
 
+    // fmt.Printf("%s\n", b[0])
+    // fmt.Printf("%#v\n", b)
+
     // TODO toBytes is working correctly but emitter is still broken.
     // that said, if I send eventSlice (from test) it works!
     _, err = e.socket.WriteToUDP(b, e.Raddr)

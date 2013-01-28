@@ -14,12 +14,12 @@ type eventAttrs map[string]interface{}
 type Event struct {
     // TODO should this be a normal struct?
     Name string
-    attributes eventAttrs
+    Attributes eventAttrs
 }
 
 // NewEvent returns an initialized Event
 func NewEvent(argv...string) *Event {
-    e := &Event{attributes: make(eventAttrs)}
+    e := &Event{Attributes: make(eventAttrs)}
     if argv != nil {
         e.Name = argv[0]
     }
@@ -28,20 +28,22 @@ func NewEvent(argv...string) *Event {
 
 // Iterator interface
 func (e *Event) Iterator() eventAttrs {
-    return e.attributes
+    return e.Attributes
 }
 
 // Get an attribute
 func (e *Event) Get(s string) interface{} {
-    return e.attributes[s]
+    return e.Attributes[s]
 }
 
+// Originally this was meant to make setting Attributes a private function. But
+// emitter uses json.Decode to set them and it looks nice.
 func (e *Event) SetAttribute(name string, d interface{}) {
     // TODO validate types
     // Should we validate string length?
     switch v := d.(type) {
     default:
-        e.attributes[name] = v
+        e.Attributes[name] = v
     }
 }
 
@@ -79,15 +81,15 @@ func (event *Event) toBytes() ([]byte, error) {
 
     // write name length
     // write name
-    // write num attributes
-    if ! (writeKey(event.Name) && write(uint16(len(event.attributes)))) {
+    // write num Attributes
+    if ! (writeKey(event.Name) && write(uint16(len(event.Attributes)))) {
         return nil, err
     }
 
-    for key := range event.attributes {
-        switch v := event.attributes[key].(type) {
+    for key := range event.Attributes {
+        switch v := event.Attributes[key].(type) {
         default:
-            // fmt.Printf("unknown key type: %T %#v\n", v,v)
+            fmt.Printf("unknown key type: %T %#v\n", v,v)
         case uint8:
             writeAttr(key, LWES_U_INT_16_TOKEN, uint16(v))
         case *uint8:
@@ -118,7 +120,7 @@ func (event *Event) toBytes() ([]byte, error) {
                 b := []byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]}
                 writeAttr(key, LWES_IP_ADDR_TOKEN, nil, b)
             }
-        case int64, *int64:
+        case int64, *int64, float64, *float64:
             writeAttr(key, LWES_INT_64_TOKEN, v)
         case uint64, *uint64:
             writeAttr(key, LWES_U_INT_64_TOKEN, v)
@@ -185,31 +187,31 @@ func (event *Event) fromBytes(buf []byte) {
         switch attrType {
         case LWES_U_INT_16_TOKEN:
             read(&tmpUint16)
-            event.attributes[attrName] = tmpUint16
+            event.Attributes[attrName] = tmpUint16
         case LWES_INT_16_TOKEN:
             read(&tmpInt16)
-            event.attributes[attrName] = tmpInt16
+            event.Attributes[attrName] = tmpInt16
         case LWES_U_INT_32_TOKEN:
             read(&tmpUint32)
-            event.attributes[attrName] = tmpUint32
+            event.Attributes[attrName] = tmpUint32
         case LWES_INT_32_TOKEN:
             read(&tmpInt32)
-            event.attributes[attrName] = tmpInt32
+            event.Attributes[attrName] = tmpInt32
         case LWES_STRING_TOKEN:
             read(&tmpUint16)
-            event.attributes[attrName] = string(p.Next(int(tmpUint16)))
+            event.Attributes[attrName] = string(p.Next(int(tmpUint16)))
         case LWES_IP_ADDR_TOKEN:
             tmpIp := p.Next(4)
             // not sure if this is completely accurate
-            event.attributes[attrName] = net.IPv4(tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0])
+            event.Attributes[attrName] = net.IPv4(tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0])
         case LWES_INT_64_TOKEN:
             read(&tmpInt64)
-            event.attributes[attrName] = tmpInt64
+            event.Attributes[attrName] = tmpInt64
         case LWES_U_INT_64_TOKEN:
             read(&tmpUint64)
-            event.attributes[attrName] = tmpUint64
+            event.Attributes[attrName] = tmpUint64
         case LWES_BOOLEAN_TOKEN:
-            event.attributes[attrName] = 1 == p.Next(1)[0]
+            event.Attributes[attrName] = 1 == p.Next(1)[0]
         }
     }
 }
@@ -221,11 +223,11 @@ func (e *Event) PrettyString() string {
     buf.WriteString(e.Name)
     buf.WriteString("\n")
 
-    for key := range e.attributes {
+    for key := range e.Attributes {
         buf.WriteString(key)
         buf.WriteString(": ")
         // gah
-        buf.WriteString(fmt.Sprintln(e.attributes[key]))
+        buf.WriteString(fmt.Sprintln(e.Attributes[key]))
     }
 
     return buf.String()
@@ -235,6 +237,6 @@ func (e *Event) PrettyString() string {
 // net.IP is base64 encoded
 func (e *Event) MarshalJSON() (data []byte, err error) {
     m := make(eventAttrs)
-    m[e.Name] = e.attributes
+    m[e.Name] = e.Attributes
     return json.Marshal(m)
 }
