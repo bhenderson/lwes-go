@@ -1,28 +1,77 @@
 package main
 
 import (
+    "encoding/json"
+    "flag"
     "fmt"
-    "os"
     "github.com/bhenderson/lwes"
-    "time"
+    "io"
+    "log"
+    "os"
 )
 
+var addr string
+var port int
+var stdin bool
+var emitter *lwes.Emitter
+
+func init() {
+    flag.Usage = usage
+
+    flag.StringVar(&addr,   "address", "224.2.2.22", "Listen Address")
+    flag.IntVar(   &port,   "port",    12345,        "Listen Port")
+    flag.BoolVar(  &stdin,  "stdin",   false,        "Emit an event for each line of json on stdin ({name:...attributes:...})")
+}
+
 func main() {
-    emitter, err := lwes.NewEmitter("224.2.2.22", 12345)
+    flag.Parse()
+
+    var err error
+    emitter, err = lwes.NewEmitter(addr, port)
 
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
     }
 
-    event := lwes.NewEvent("Event4")
-    event.SetAttribute("field1", 15)
+    event := lwes.NewEvent()
 
-    for _ = range time.Tick(2 * time.Second) {
-        err = emitter.Emit(event)
-
-        if err != nil {
-            fmt.Println(err)
-        }
+    if stdin {
+        fromJson(event)
+    } else {
+        // Just emit a default event.
+        event.Name = "LWES::TestEmitter"
+        event.SetAttribute("field1", 15)
+        emit(event)
     }
+}
+
+func emit(e *lwes.Event) {
+    err := emitter.Emit(e)
+
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
+}
+
+func fromJson(e *lwes.Event) {
+    dec := json.NewDecoder(os.Stdin)
+
+    for {
+
+        if err := dec.Decode(e); err == io.EOF {
+            break
+        } else if err != nil {
+            log.Fatal(err)
+        }
+
+        emit(e)
+    }
+}
+
+func usage() {
+    fmt.Fprintf(os.Stderr, "Usage: %s [opts]\n", os.Args[0])
+    flag.PrintDefaults()
+    os.Exit(1)
 }
