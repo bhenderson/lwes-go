@@ -38,6 +38,7 @@ func (e *Emitter) Emit(event *Event) error {
 
     // TODO toBytes is working correctly but emitter is still broken.
     // that said, if I send eventSlice (from test) it works!
+    // ruby can listen/write to 127.0.0.1 but go can't. look at how C is binding.
     _, err = e.socket.Write(b)
 
     return err
