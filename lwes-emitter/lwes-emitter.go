@@ -26,6 +26,7 @@ func main() {
 
     var err error
     emitter, err = lwes.NewEmitter(addr)
+    emitter.Heartbeat = 0
 
     if err != nil {
         fmt.Println(err)

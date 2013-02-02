@@ -55,6 +55,7 @@ func (e *Emitter) Close() {
 }
 
 // Send a heartbeat event every Heartbeat seconds.
+// if Heartbeat is 0, don't send any.
 func (e *Emitter) emitHeartbeats() {
 
     e.Emit(startupEvent)
