@@ -3,6 +3,8 @@ package lwes
 import (
     "net"
     "time"
+    "os"
+    "os/signal"
 )
 
 type Emitter struct {
@@ -26,8 +28,7 @@ func NewEmitter(udp string, iface ...*net.Interface) (*Emitter, error) {
     }
 
     e := &Emitter{Heartbeat: 1, TTL: 3, closer: make(chan bool), socket: conn}
-    // e.Emit(startupEvent)
-    // go e.emitHeartbeats()
+    go e.emitHeartbeats()
     return e, nil
 }
 
@@ -56,13 +57,20 @@ func (e *Emitter) Close() {
 // Send a heartbeat event every Heartbeat seconds.
 func (e *Emitter) emitHeartbeats() {
 
+    e.Emit(startupEvent)
     defer e.Emit(shutdownEvent)
+
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
 
     ticker := time.Tick(time.Duration(e.Heartbeat) * time.Second)
     for {
         select {
         case <- ticker:
             e.Emit(heartbeatEvent)
+        case <- c:
+            // received SIGINT
+            return
         case <- e.closer:
             return
         }
