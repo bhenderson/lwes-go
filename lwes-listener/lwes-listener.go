@@ -16,8 +16,7 @@ var printj bool
 func init() {
     flag.Usage = usage
 
-    flag.StringVar(&addr,   "address", "224.2.2.22", "Listen Address")
-    flag.IntVar(   &port,   "port",    12345,        "Listen Port")
+    flag.StringVar(&addr,   "address", "224.2.2.22:12345", "Listen Channel")
     flag.BoolVar(  &pretty, "pretty",  false,        "Pretty print event")
     flag.BoolVar(  &printj, "json",    false,        "Print event as json")
 }
@@ -25,7 +24,7 @@ func init() {
 func main() {
     flag.Parse()
 
-    listener, err := lwes.NewListener(addr, port)
+    listener, err := lwes.NewListener(addr)
 
     if err != nil {
         fmt.Println(err)
@@ -41,10 +40,10 @@ func usage() {
     os.Exit(1)
 }
 
-func callback(event *lwes.Event, err error) {
+func callback(event *lwes.Event, err error) error {
     if err != nil {
         fmt.Println(err)
-        return
+        return nil
     }
 
     switch {
@@ -57,4 +56,6 @@ func callback(event *lwes.Event, err error) {
         fmt.Println(string(b))
     }
     os.Stdout.Sync()
+
+    return nil
 }

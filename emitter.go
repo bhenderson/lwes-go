@@ -18,12 +18,17 @@ var (
     heartbeatEvent = NewEvent("System::Heartbeat")
 )
 
-func NewEmitter(ip interface{}, port int, iface ...*net.Interface) (*Emitter, error) {
-    conn, err := NewConn(ip, port, iface...)
+func NewEmitter(udp string, iface ...*net.Interface) (*Emitter, error) {
+    conn, err := NewConn(udp, true, iface...)
+
+    if err != nil {
+        return nil, err
+    }
+
     e := &Emitter{Heartbeat: 1, TTL: 3, closer: make(chan bool), socket: conn}
     // e.Emit(startupEvent)
     // go e.emitHeartbeats()
-    return e, err
+    return e, nil
 }
 
 func (e *Emitter) Emit(event *Event) error {
@@ -34,11 +39,8 @@ func (e *Emitter) Emit(event *Event) error {
     }
 
     // fmt.Printf("%s\n", b[0])
-    // fmt.Printf("%#v\n", b)
+    // fmt.Printf("bytes: %#v\n", b)
 
-    // TODO toBytes is working correctly but emitter is still broken.
-    // that said, if I send eventSlice (from test) it works!
-    // ruby can listen/write to 127.0.0.1 but go can't. look at how C is binding.
     _, err = e.socket.Write(b)
 
     return err

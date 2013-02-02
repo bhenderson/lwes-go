@@ -26,21 +26,21 @@ var eventSlice = []byte{0x6, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x33, 0x0, 0x6, 0x8, 
                         0x61, 0x6e, 0x31, 0x9, 0x1, 0x8, 0x62, 0x6f, 0x6f, 0x6c, 0x65, 0x61,
                         0x6e, 0x32, 0x9, 0x0}
 
-func TestEvent(t *testing.T) {
-    e := NewEvent()
-    e.fromBytes(eventSlice)
+// func TestEvent(t *testing.T) {
+    // e := NewEvent()
+    // e.fromBytes(eventSlice)
 
-    assertEqual := func(expected interface{}, actual interface{}, msg... string) {
-        if expected != actual {
-            t.Fatalf("%v\nexpected (%T)%#v to be equal to (%T)%#v", msg, expected,expected,actual,actual)
-        }
-    }
+    // assertEqual := func(expected interface{}, actual interface{}, msg... string) {
+        // if expected != actual {
+            // t.Fatalf("%v\nexpected (%T)%#v to be equal to (%T)%#v", msg, expected,expected,actual,actual)
+        // }
+    // }
 
-    newSlice, _ := e.toBytes()
-    t.Logf("%#v", eventSlice)
-    t.Logf("%#v", newSlice)
-    assertEqual(false, true)
-}
+    // newSlice, _ := e.toBytes()
+    // t.Logf("%#v", eventSlice)
+    // t.Logf("%#v", newSlice)
+    // assertEqual(false, true)
+// }
 
 func TestEventDeserializer(t *testing.T) {
     e := NewEvent()

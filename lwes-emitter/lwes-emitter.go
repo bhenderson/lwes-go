@@ -11,15 +11,13 @@ import (
 )
 
 var addr string
-var port int
 var stdin bool
 var emitter *lwes.Emitter
 
 func init() {
     flag.Usage = usage
 
-    flag.StringVar(&addr,   "address", "224.2.2.22", "Listen Address")
-    flag.IntVar(   &port,   "port",    12345,        "Listen Port")
+    flag.StringVar(&addr,   "udpaddr", "224.2.2.22:12345", "Listen Channel")
     flag.BoolVar(  &stdin,  "stdin",   false,        "Emit an event for each line of json on stdin ({name:...attributes:...})")
 }
 
@@ -27,7 +25,7 @@ func main() {
     flag.Parse()
 
     var err error
-    emitter, err = lwes.NewEmitter(addr, port)
+    emitter, err = lwes.NewEmitter(addr)
 
     if err != nil {
         fmt.Println(err)

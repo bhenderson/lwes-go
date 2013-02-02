@@ -10,11 +10,11 @@ type Listener struct {
     socket *Conn
 }
 
-type listenerAction func(*Event, error)
+type listenerAction func(*Event, error) error
 
 // NewListener creates a new Listener and binds to ip and port and iface
-func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, error) {
-    conn, err := NewConn(ip, port, iface...)
+func NewListener(udp string, iface ...*net.Interface) (*Listener, error) {
+    conn, err := NewConn(udp, false, iface...)
     l := &Listener{socket: conn}
 
     return l, err
@@ -24,7 +24,13 @@ func NewListener(ip interface{}, port int, iface ...*net.Interface) (*Listener, 
 func (l *Listener) Each(action listenerAction) {
     defer l.socket.Close()
 
-    for { action(l.Recv()) }
+    var err error
+    for {
+        err = action(l.Recv())
+        if err != nil {
+            panic(err)
+        }
+    }
 }
 
 // Recv receives an event
@@ -42,15 +48,12 @@ func (l *Listener) Recv() (*Event, error) {
 
     time := time.Now()
 
-    fmt.Printf("%#v", buf[:read])
-
     event := NewEvent()
     event.fromBytes(buf[:read])
 
     event.Attributes["receiptTime"] = time
     event.Attributes["senderIp"]    = raddr.IP.To16()
     event.Attributes["senderPort"]  = raddr.Port
-
 
     return event, nil
 }
