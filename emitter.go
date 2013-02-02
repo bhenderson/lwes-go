@@ -56,13 +56,14 @@ func (e *Emitter) Close() {
 
 // Send a heartbeat event every Heartbeat seconds.
 // if Heartbeat is 0, don't send any.
+// shutdown event may not send (os.Exit)
 func (e *Emitter) emitHeartbeats() {
 
     e.Emit(startupEvent)
     defer e.Emit(shutdownEvent)
 
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
+    c := make(chan os.Signal, 2)
+    signal.Notify(c, os.Interrupt, os.Kill)
 
     ticker := time.Tick(time.Duration(e.Heartbeat) * time.Second)
     for {
