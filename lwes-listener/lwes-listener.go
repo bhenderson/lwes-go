@@ -5,7 +5,7 @@ import (
     "fmt"
     "encoding/json"
     "os"
-    "github.com/bhenderson/lwes"
+    "github.com/bhenderson/lwes-go"
 )
 
 var addr string

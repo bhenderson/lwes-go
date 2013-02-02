@@ -4,7 +4,7 @@ import (
     "encoding/json"
     "flag"
     "fmt"
-    "github.com/bhenderson/lwes"
+    "github.com/bhenderson/lwes-go"
     "io"
     "log"
     "os"
