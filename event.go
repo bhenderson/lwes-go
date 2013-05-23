@@ -176,24 +176,29 @@ func (event *Event) fromBytes(buf []byte) {
     }
 
     // temporary types
-    var tmpUint16 uint16
-    var tmpInt16 int16
-    var tmpUint32 uint32
-    var tmpInt32 int32
-    var tmpUint64 uint64
-    var tmpInt64 int64
+    var (
+        tmpUint16 uint16
+        tmpInt16  int16
+        tmpUint32 uint32
+        tmpInt32  int32
+        tmpUint64 uint64
+        tmpInt64  int64
 
-    var nameSize byte
+        attrSize uint16
+        nameSize byte
+    )
+
     read(&nameSize)
     event.Name = string(p.Next(int(nameSize)))
 
-    var attrSize uint16
     read(&attrSize)
 
     for i := 0; i < int(attrSize); i++ {
-        var attrNameSize byte
-        var attrName string
-        var attrType byte
+        var (
+            attrNameSize byte
+            attrName     string
+            attrType     byte
+        )
 
         read(&attrNameSize)
         attrName = string(p.Next(int(attrNameSize)))
