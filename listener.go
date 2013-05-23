@@ -1,8 +1,8 @@
 package lwes
 
 import (
-    "net"
     "fmt"
+    "net"
     "time"
 )
 
@@ -52,8 +52,8 @@ func (l *Listener) Recv() (*Event, error) {
     event.fromBytes(buf[:read])
 
     event.Attributes["receiptTime"] = time
-    event.Attributes["senderIp"]    = raddr.IP.To16()
-    event.Attributes["senderPort"]  = raddr.Port
+    event.Attributes["senderIp"] = raddr.IP.To16()
+    event.Attributes["senderPort"] = raddr.Port
 
     return event, nil
 }

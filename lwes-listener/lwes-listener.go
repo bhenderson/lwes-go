@@ -1,11 +1,11 @@
 package main
 
 import (
+    "encoding/json"
     "flag"
     "fmt"
-    "encoding/json"
-    "os"
     "github.com/bhenderson/lwes-go"
+    "os"
 )
 
 var addr string
@@ -16,9 +16,9 @@ var printj bool
 func init() {
     flag.Usage = usage
 
-    flag.StringVar(&addr,   "address", "224.2.2.22:12345", "Listen Channel")
-    flag.BoolVar(  &pretty, "pretty",  false,        "Pretty print event")
-    flag.BoolVar(  &printj, "json",    false,        "Print event as json")
+    flag.StringVar(&addr, "address", "224.2.2.22:12345", "Listen Channel")
+    flag.BoolVar(&pretty, "pretty", false, "Pretty print event")
+    flag.BoolVar(&printj, "json", false, "Print event as json")
 }
 
 func main() {

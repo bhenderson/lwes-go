@@ -5,8 +5,8 @@ import (
 )
 
 type Conn struct {
-    addr *net.UDPAddr
-    iface *net.Interface
+    addr   *net.UDPAddr
+    iface  *net.Interface
     socket *net.UDPConn
 }
 

@@ -2,16 +2,16 @@ package lwes
 
 import (
     "net"
-    "time"
     "os"
     "os/signal"
+    "time"
 )
 
 type Emitter struct {
     Heartbeat int8
-    TTL int8
-    closer chan bool
-    socket *Conn
+    TTL       int8
+    closer    chan bool
+    socket    *Conn
 }
 
 var (
@@ -68,12 +68,12 @@ func (e *Emitter) emitHeartbeats() {
     ticker := time.Tick(time.Duration(e.Heartbeat) * time.Second)
     for {
         select {
-        case <- ticker:
+        case <-ticker:
             e.Emit(heartbeatEvent)
-        case <- c:
+        case <-c:
             // received SIGINT
             return
-        case <- e.closer:
+        case <-e.closer:
             return
         }
     }
