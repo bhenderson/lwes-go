@@ -22,8 +22,6 @@ func NewListener(udp string, iface ...*net.Interface) (*Listener, error) {
 
 // Each takes a listenerAction and gives it an *Event. See listenerAction.
 func (l *Listener) Each(action listenerAction) {
-    defer l.socket.Close()
-
     var err error
     for {
         err = action(l.Recv())
@@ -52,7 +50,7 @@ func (l *Listener) Recv() (*Event, error) {
     event.fromBytes(buf[:read])
 
     event.Attributes["receiptTime"] = time
-    event.Attributes["senderIp"] = raddr.IP.To16()
+    event.Attributes["senderIp"] = netIP(raddr.IP.To16())
     event.Attributes["senderPort"] = raddr.Port
 
     return event, nil
