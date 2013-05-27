@@ -49,11 +49,20 @@ func callback(event *lwes.Event, err error) error {
     switch {
     default:
         fmt.Println(event)
-    case pretty:
-        fmt.Println(event.PrettyString())
     case printj:
-        b, _ := json.Marshal(event)
+        var b []byte
+        if pretty {
+            b, _ = json.MarshalIndent(event, "", "  ")
+        } else {
+            b, _ = json.Marshal(event)
+        }
         fmt.Println(string(b))
+    case pretty:
+        fmt.Println(event.Name)
+        for k, _ := range event.Attributes {
+            fmt.Printf("%s: %v\n", k, event.Attributes[k])
+        }
+        fmt.Println("")
     }
     os.Stdout.Sync()
 

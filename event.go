@@ -238,26 +238,12 @@ func (event *Event) fromBytes(buf []byte) {
 }
 
 // PrettyString returns a "pretty" formatted string.
-func (e *Event) PrettyString() string {
-    var buf bytes.Buffer
-
-    buf.WriteString(e.Name)
-    buf.WriteString("\n")
-
-    for key := range e.Attributes {
-        buf.WriteString(key)
-        buf.WriteString(": ")
-        // gah
-        buf.WriteString(fmt.Sprintln(e.Attributes[key]))
-    }
-
-    return buf.String()
+func (e *Event) String() string {
+    return fmt.Sprintf("%s: %v", e.Name, e.Attributes)
 }
 
 // MarshalJSON returns a json byte array of name:attributes
 // net.IP is base64 encoded
 func (e *Event) MarshalJSON() (data []byte, err error) {
-    m := make(eventAttrs)
-    m[e.Name] = e.Attributes
-    return json.Marshal(m)
+    return json.Marshal(eventAttrs{e.Name: e.Attributes})
 }
