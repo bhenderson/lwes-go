@@ -1,8 +1,8 @@
 package lwes
 
 import (
-    "net"
     "encoding/json"
+    "net"
 )
 
 type netIP net.IP
