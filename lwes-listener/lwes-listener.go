@@ -8,10 +8,12 @@ import (
     "os"
 )
 
-var addr string
-var port int
-var pretty bool
-var printj bool
+var (
+    addr string
+    port int
+    pretty bool
+    printj bool
+)
 
 func init() {
     flag.Usage = usage

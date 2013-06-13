@@ -10,15 +10,17 @@ import (
     "os"
 )
 
-var addr string
-var stdin bool
-var emitter *lwes.Emitter
+var (
+    addr string
+    emitter *lwes.Emitter
+    eventName string
+)
 
 func init() {
     flag.Usage = usage
 
-    flag.StringVar(&addr,   "udpaddr", "224.2.2.22:12345", "Listen Channel")
-    flag.BoolVar(  &stdin,  "stdin",   false,        "Emit an event for each line of json on stdin ({name:...attributes:...})")
+    flag.StringVar(&addr, "address", "224.2.2.22:12345", "Listen Channel")
+    flag.StringVar(&eventName,   "event_name", "LWES_GO::TestEvent", "The name of the event")
 }
 
 func main() {
@@ -26,23 +28,15 @@ func main() {
 
     var err error
     emitter, err = lwes.NewEmitter(addr)
-    emitter.Heartbeat = 0
 
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
     }
 
-    event := lwes.NewEvent()
+    emitter.Heartbeat = 0
 
-    if stdin {
-        fromJson(event)
-    } else {
-        // Just emit a default event.
-        event.Name = "LWES::TestEmitter"
-        event.SetAttribute("field1", 15)
-        emit(event)
-    }
+    fromJson()
 }
 
 func emit(e *lwes.Event) {
@@ -54,17 +48,22 @@ func emit(e *lwes.Event) {
     }
 }
 
-func fromJson(e *lwes.Event) {
+func fromJson() {
+    e := lwes.NewEvent()
+    attrs := make(map[string]interface{})
+    e.Name = eventName
+
     dec := json.NewDecoder(os.Stdin)
 
     for {
 
-        if err := dec.Decode(e); err == io.EOF {
+        if err := dec.Decode(&attrs); err == io.EOF {
             break
         } else if err != nil {
             log.Fatal(err)
         }
 
+        e.Attributes = attrs
         emit(e)
     }
 }
