@@ -13,14 +13,12 @@ import (
 var (
     addr string
     emitter *lwes.Emitter
-    eventName string
 )
 
 func init() {
     flag.Usage = usage
 
     flag.StringVar(&addr, "address", "224.2.2.22:12345", "Listen Channel")
-    flag.StringVar(&eventName,   "event_name", "LWES_GO::TestEvent", "The name of the event")
 }
 
 func main() {
@@ -50,20 +48,17 @@ func emit(e *lwes.Event) {
 
 func fromJson() {
     e := lwes.NewEvent()
-    attrs := make(map[string]interface{})
-    e.Name = eventName
 
     dec := json.NewDecoder(os.Stdin)
 
     for {
 
-        if err := dec.Decode(&attrs); err == io.EOF {
+        if err := dec.Decode(e); err == io.EOF {
             break
         } else if err != nil {
-            log.Fatal(err)
+            log.Fatal("json error: ", err)
         }
 
-        e.Attributes = attrs
         emit(e)
     }
 }
