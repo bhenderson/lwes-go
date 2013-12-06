@@ -247,3 +247,21 @@ func (e *Event) String() string {
 func (e *Event) MarshalJSON() (data []byte, err error) {
     return json.Marshal(eventAttrs{e.Name: e.Attributes})
 }
+
+// UnmarshalJSON decodes data into Attributes. If Name is available and is a string, removes it from the Attributes and sets the Name.
+func (e *Event) UnmarshalJSON(data []byte) (err error) {
+    err = json.Unmarshal(data, &e.Attributes)
+
+    if err != nil {
+        return
+    }
+
+    if name, ok := e.Attributes["Name"]; ok {
+        if v, ok := name.(string); ok {
+            e.Name = v
+            delete(e.Attributes, "Name")
+        }
+    }
+
+    return
+}
