@@ -10,7 +10,6 @@ import (
 
 var (
     addr string
-    port int
     pretty bool
     printj bool
 )
