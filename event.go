@@ -242,10 +242,15 @@ func (e *Event) String() string {
     return fmt.Sprintf("%s: %v", e.Name, e.Attributes)
 }
 
-// MarshalJSON returns a json byte array of name:attributes
+// MarshalJSON returns a json byte array of attributes
 // net.IP is base64 encoded
 func (e *Event) MarshalJSON() (data []byte, err error) {
-    return json.Marshal(eventAttrs{e.Name: e.Attributes})
+    if e.Name != "" {
+        e.Attributes["Name"] = e.Name
+    }
+    data, err = json.Marshal(e.Attributes)
+    delete(e.Attributes, "Name") // not sure if safe to do, but I think so.
+    return
 }
 
 // UnmarshalJSON decodes data into Attributes. If Name is available and is a string, removes it from the Attributes and sets the Name.
