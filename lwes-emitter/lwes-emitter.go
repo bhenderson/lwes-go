@@ -64,7 +64,8 @@ func fromJson() {
 }
 
 func usage() {
-    fmt.Fprintf(os.Stderr, "Usage: %s [opts]\n", os.Args[0])
+    fmt.Fprintf(os.Stderr, "Usage: json_input | %s [opts]\n", os.Args[0])
     flag.PrintDefaults()
+    fmt.Print("json_input optionally can contain Name.\n")
     os.Exit(1)
 }
