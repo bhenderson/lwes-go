@@ -1,3 +1,4 @@
+// Command esf is a generator for ESF (Event Specification File) to go files.
 package main
 
 import "os"

@@ -11,20 +11,20 @@ import (
 )
 
 func NewScanner(r io.Reader) *Scanner {
-	s := bufio.NewScanner(r)
-	s.Split(ScanTokens)
+	c := bufio.NewScanner(r)
+	c.Split(ScanTokens)
 	return &Scanner{
-		c:   s,
-		buf: &bytes.Buffer{},
+		c:   c,
+		esf: Esf{},
 	}
 }
 
 type Scanner struct {
-	c    *bufio.Scanner
-	buf  *bytes.Buffer
-	tok  Tok
-	attr Tok
-	err  error
+	c   *bufio.Scanner
+	buf *bytes.Buffer
+	tok Tok
+	esf Esf
+	err error
 }
 
 func (s *Scanner) Scan() ([]byte, error) {
@@ -36,7 +36,8 @@ func (s *Scanner) Scan() ([]byte, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
-	return format.Source(s.buf.Bytes())
+	buf := s.esf.Bytes()
+	return format.Source(buf)
 }
 
 func (s *Scanner) scan() bool {
@@ -76,6 +77,10 @@ func (s *Scanner) next() *Tok {
 		"boolean":
 		return &Tok{TOK_TYPE, data}
 	}
+	r := rune(data[0])
+	if nonWord(r) {
+		return &Tok{TOK_INVALID, data}
+	}
 	return &Tok{TOK_WORD, data}
 }
 
@@ -88,15 +93,12 @@ const (
 	TOK_ATTR_END
 	TOK_TYPE
 	TOK_WORD
+	TOK_INVALID
 )
 
 type Tok struct {
 	t TokType
 	b []byte
-}
-
-func (t *Tok) Bytes() []byte {
-	return t.b
 }
 
 var invalidToken = fmt.Errorf("invalid token")
@@ -162,7 +164,11 @@ func scanEvent(s *Scanner) scanFunc {
 		return scanEvent
 	}
 	if s.tok.t == TOK_WORD {
-		fmt.Fprintf(s.buf, "type %s struct { ", s.tok.b)
+		e := s.esf.Event()
+		e.Name = s.tok.b
+		if string(e.Name) == "MetaEventInfo" {
+			s.esf.meta = e
+		}
 		return scanListBegin
 	}
 	s.err = invalidToken
@@ -183,11 +189,11 @@ func scanListBegin(s *Scanner) scanFunc {
 
 func scanType(s *Scanner) scanFunc {
 	if s.tok.t == TOK_COMMENT {
-		writeComment(s)
+		s.esf.Event().Attr().AddComment(s.tok.b)
 		return scanType
 	}
 	if s.tok.t == TOK_LIST_END {
-		fmt.Fprintf(s.buf, "}\n")
+		s.esf.clearEvent()
 		return scanEvent
 	}
 	if s.tok.t == TOK_TYPE {
@@ -209,8 +215,7 @@ func scanType(s *Scanner) scanFunc {
 			s.err = invalidToken
 			return nil
 		}
-		s.tok.b = []byte(t)
-		s.attr = s.tok
+		s.esf.Event().NewAttr().Type = []byte(t)
 		return scanAttr
 	}
 	s.err = invalidToken
@@ -219,7 +224,7 @@ func scanType(s *Scanner) scanFunc {
 
 func scanAttr(s *Scanner) scanFunc {
 	if s.tok.t == TOK_WORD {
-		fmt.Fprintf(s.buf, "  %s %s ", s.tok.b, s.attr.b)
+		s.esf.Event().Attr().Name = s.tok.b
 		return scanAttrEnd
 	}
 	s.err = invalidToken
@@ -235,5 +240,106 @@ func scanAttrEnd(s *Scanner) scanFunc {
 }
 
 func writeComment(s *Scanner) {
-	fmt.Fprintf(s.buf, "// %s\n", s.tok.b)
+	s.esf.Event().AddComment(s.tok.b)
+}
+
+// Build ESF
+type Comment struct {
+	Lines [][]byte
+}
+
+func (c *Comment) AddComment(b []byte) {
+	var i int
+	for ; i < len(b); i++ {
+		if b[i] != '#' && !isSpace(rune(b[i])) {
+			break
+		}
+	}
+	c.Lines = append(c.Lines, b[i:])
+}
+
+type Esf struct {
+	meta   *Event
+	event  *Event
+	Events []Event
+}
+
+func (e *Esf) Bytes() []byte {
+	var buf bytes.Buffer
+	var hasMeta bool
+
+	if e.meta != nil {
+		hasMeta = true
+		buf.Write(e.meta.Bytes())
+	}
+
+	for _, event := range e.Events {
+		event.meta = hasMeta
+		buf.Write(event.Bytes())
+	}
+
+	return buf.Bytes()
+}
+
+func (e *Esf) Event() *Event {
+	if e.event == nil {
+		e.event = &Event{}
+	}
+	return e.event
+}
+
+func (e *Esf) clearEvent() {
+	if e.event != nil && e.event != e.meta {
+		e.Events = append(e.Events, *e.event)
+	}
+	e.event = nil
+}
+
+type Event struct {
+	Comment
+	Name  []byte
+	Attrs []Attr
+	attr  *Attr
+	meta  bool
+}
+
+func (e *Event) Bytes() []byte {
+	buf := &bytes.Buffer{}
+
+	for _, c := range e.Comment.Lines {
+		fmt.Fprintf(buf, "// %s\n", c)
+	}
+	fmt.Fprintf(buf, "type %s struct {\n", e.Name)
+	if e.meta {
+		fmt.Fprintf(buf, "  MetaEventInfo\n")
+	}
+	for _, attr := range e.Attrs {
+		for _, c := range attr.Comment.Lines {
+			fmt.Fprintf(buf, "// %s\n", c)
+		}
+		fmt.Fprintf(buf, "  %s %s\n", attr.Name, attr.Type)
+	}
+	fmt.Fprintf(buf, "}\n\n")
+
+	return buf.Bytes()
+}
+
+func (e *Event) Attr() *Attr {
+	if e.attr == nil {
+		e.attr = &Attr{}
+	}
+	return e.attr
+}
+
+func (e *Event) NewAttr() *Attr {
+	if e.attr != nil {
+		e.Attrs = append(e.Attrs, *e.attr)
+		e.attr = nil
+	}
+	return e.Attr()
+}
+
+type Attr struct {
+	Comment
+	Name, Type []byte
 }
