@@ -5,12 +5,12 @@ import (
 	"net"
 )
 
-type netIP net.IP
+type NetIP net.IP
 
-func (ip netIP) MarshalJSON() ([]byte, error) {
+func (ip NetIP) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ip.String())
 }
 
-func (ip netIP) String() string {
+func (ip NetIP) String() string {
 	return net.IP(ip).String()
 }

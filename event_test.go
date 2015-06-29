@@ -67,7 +67,7 @@ func TestEventDeserializer(t *testing.T) {
 	assertField("field1", "String value")
 	// assertField("remote_addr", []byte{192,168,0,1})
 
-	v := e.Get("remote_addr").(netIP)
+	v := e.Get("remote_addr").(NetIP)
 
 	if v[0] != 192 ||
 		v[1] != 168 ||
@@ -146,10 +146,10 @@ func TestEventSerializer(t *testing.T) {
 
 	assertIPField := func(field string, d interface{}) {
 		ip := ev.Get(field)
-		assertEqual(ip.(netIP)[0], d.(net.IP)[12], field)
-		assertEqual(ip.(netIP)[1], d.(net.IP)[13], field)
-		assertEqual(ip.(netIP)[2], d.(net.IP)[14], field)
-		assertEqual(ip.(netIP)[3], d.(net.IP)[15], field)
+		assertEqual(ip.(NetIP)[0], d.(net.IP)[12], field)
+		assertEqual(ip.(NetIP)[1], d.(net.IP)[13], field)
+		assertEqual(ip.(NetIP)[2], d.(net.IP)[14], field)
+		assertEqual(ip.(NetIP)[3], d.(net.IP)[15], field)
 	}
 
 	assertEqual("Event4", ev.Name, "ev.Name")

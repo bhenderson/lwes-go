@@ -224,7 +224,7 @@ func (event *Event) fromBytes(buf []byte) {
 		case LWES_IP_ADDR_TOKEN:
 			tmpIp := p.Next(4)
 			// not sure if this is completely accurate
-			event.Attributes[attrName] = netIP{tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0]}
+			event.Attributes[attrName] = NetIP{tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0]}
 		case LWES_INT_64_TOKEN:
 			read(&tmpInt64)
 			event.Attributes[attrName] = tmpInt64

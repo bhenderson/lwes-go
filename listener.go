@@ -50,7 +50,7 @@ func (l *Listener) Recv() (*Event, error) {
 	event.fromBytes(buf[:read])
 
 	event.Attributes["receiptTime"] = time
-	event.Attributes["senderIp"] = netIP(raddr.IP.To16())
+	event.Attributes["senderIp"] = NetIP(raddr.IP.To16())
 	event.Attributes["senderPort"] = raddr.Port
 
 	return event, nil
