@@ -244,13 +244,12 @@ func (e *Event) String() string {
 
 // MarshalJSON returns a json byte array of attributes
 // net.IP is base64 encoded
-func (e *Event) MarshalJSON() (data []byte, err error) {
+func (e *Event) MarshalJSON() ([]byte, error) {
 	if e.Name != "" {
 		e.Attributes["Name"] = e.Name
+		defer delete(e.Attributes, "Name")
 	}
-	data, err = json.Marshal(e.Attributes)
-	delete(e.Attributes, "Name") // not sure if safe to do, but I think so.
-	return
+	return json.Marshal(e.Attributes)
 }
 
 // UnmarshalJSON decodes data into Attributes. If Name is available and is a string, removes it from the Attributes and sets the Name.
