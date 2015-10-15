@@ -1,82 +1,93 @@
 package lwes
 
 import (
+	"fmt"
 	"net"
+	"net/url"
 )
 
-type Conn struct {
+type Conn interface {
+	Close()
+	Read(b []byte) (int, net.Addr, error)
+	Write(b []byte) (int, error)
+}
+
+func NewConn(laddr string, emitter bool, iface ...*net.Interface) (Conn, error) {
+	u, err := url.Parse(laddr)
+	if err != nil {
+		return nil, err
+	}
+	nt := u.Scheme
+	if nt == "" {
+		nt = "udp"
+	}
+	laddr = u.Host + u.Path
+
+	var ifi *net.Interface
+
+	if len(iface) > 0 {
+		ifi = iface[0]
+	}
+
+	var conn Conn
+
+	switch nt {
+	case "udp", "udp4", "udp6":
+		conn, err = bindUDP(laddr, ifi, emitter)
+	case "tcp", "tcp4", "tcp6":
+	case "unix", "unixgram", "unixpacket":
+	case "ip", "ip4", "ip6":
+	default:
+		err = fmt.Errorf("%q is not supported")
+	}
+
+	return conn, err
+}
+
+type udpConn struct {
 	addr   *net.UDPAddr
-	iface  *net.Interface
 	socket *net.UDPConn
 }
 
-// Bind starts listening on udp addr.
-// if emitter is true, bind to :0 and write to c.addr
-// else bind to c.addr and read from c.addr
-func (c *Conn) Bind(emitter bool) error {
-	var addr *net.UDPAddr
-	var conn *net.UDPConn
-	var err error
-
-	if emitter {
-		addr, err = net.ResolveUDPAddr("udp", ":0")
-	} else {
-		addr = c.addr
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if addr.IP != nil && addr.IP.IsMulticast() {
-		conn, err = net.ListenMulticastUDP("udp", nil, addr)
-	} else {
-		conn, err = net.ListenUDP("udp", addr)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	c.socket = conn
-	return nil
-}
-
-// Close closes the socket. Make sure to call this if calling bind explicitely.
-func (c *Conn) Close() {
+func (c *udpConn) Close() {
 	if c.socket != nil {
 		c.socket.Close()
 	}
 }
 
-func (c *Conn) Read(b []byte) (int, *net.UDPAddr, error) {
+func (c *udpConn) Read(b []byte) (int, net.Addr, error) {
 	return c.socket.ReadFromUDP(b)
 }
 
-func (c *Conn) Write(b []byte) (int, error) {
+func (c *udpConn) Write(b []byte) (int, error) {
 	return c.socket.WriteToUDP(b, c.addr)
 }
 
-func NewConn(udp string, emitter bool, iface ...*net.Interface) (*Conn, error) {
-	addr, err := net.ResolveUDPAddr("udp", udp)
+func bindUDP(laddr string, iface *net.Interface, emitter bool) (*udpConn, error) {
+	addr, err := net.ResolveUDPAddr("udp", laddr)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var ifi *net.Interface
+	c := &udpConn{addr: addr}
 
-	if iface != nil {
-		ifi = iface[0]
+	if emitter {
+		addr, err = net.ResolveUDPAddr("udp", ":0")
 	}
-
-	c := &Conn{addr: addr, iface: ifi}
-
-	err = c.Bind(emitter)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	var conn *net.UDPConn
+
+	if addr.IP != nil && addr.IP.IsMulticast() {
+		conn, err = net.ListenMulticastUDP("udp", iface, addr)
+	} else {
+		conn, err = net.ListenUDP("udp", addr)
+	}
+
+	c.socket = conn
+	return c, err
 }

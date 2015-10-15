@@ -7,7 +7,7 @@ import (
 )
 
 type Listener struct {
-	socket *Conn
+	socket Conn
 }
 
 // NewListener creates a new Listener and binds to ip and port and iface
@@ -37,8 +37,8 @@ func (l *Listener) Recv() (*Event, error) {
 	event.fromBytes(buf[:read])
 
 	event.Attributes["ReceiptTime"] = time
-	event.Attributes["SenderIP"] = NetIP(raddr.IP.To16())
-	event.Attributes["SenderPort"] = raddr.Port
+	event.Attributes["SenderIP"] = addrIP(raddr)
+	event.Attributes["SenderPort"] = addrPort(raddr)
 
 	return event, nil
 }

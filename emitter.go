@@ -11,7 +11,7 @@ type Emitter struct {
 	Heartbeat int8
 	TTL       int8
 	closer    chan bool
-	socket    *Conn
+	socket    Conn
 }
 
 var (
@@ -20,8 +20,8 @@ var (
 	heartbeatEvent = NewEvent("System::Heartbeat")
 )
 
-func NewEmitter(udp string, iface ...*net.Interface) (*Emitter, error) {
-	conn, err := NewConn(udp, true, iface...)
+func NewEmitter(addr string, iface ...*net.Interface) (*Emitter, error) {
+	conn, err := NewConn(addr, true, iface...)
 
 	if err != nil {
 		return nil, err
