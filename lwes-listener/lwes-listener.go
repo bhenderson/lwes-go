@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/bhenderson/lwes-go"
 )
@@ -33,8 +34,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	lc := listen(listener)
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, os.Interrupt)
+
 	for {
-		callback(listener.Recv())
+		select {
+		case <-sigc:
+			listener.Close()
+			return
+		case event := <-lc:
+			callback(event)
+		}
 	}
 }
 
@@ -44,12 +55,22 @@ func usage() {
 	os.Exit(1)
 }
 
-func callback(event *lwes.Event, err error) error {
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	}
+func listen(l *lwes.Listener) chan *lwes.Event {
+	ch := make(chan *lwes.Event)
 
+	go func() {
+		for {
+			e, err := l.Recv()
+			if err == nil {
+				ch <- e
+			}
+		}
+	}()
+
+	return ch
+}
+
+func callback(event *lwes.Event) error {
 	switch {
 	default:
 		fmt.Println(event)

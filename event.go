@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"net"
 )
 
 // http://golang.org/doc/articles/json_and_go.html
@@ -116,12 +115,7 @@ func (event *Event) toBytes() ([]byte, error) {
 			writeAttr(key, LWES_STRING_TOKEN, uint16(len(v)), []byte(v))
 		case *string:
 			writeAttr(key, LWES_STRING_TOKEN, uint16(len(*v)), []byte(*v))
-		case net.IP:
-			if tmpIP := v.To4(); tmpIP != nil {
-				b := []byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]}
-				writeAttr(key, LWES_IP_ADDR_TOKEN, nil, b)
-			}
-		case *net.IP:
+		case IP4: // net.IP *net.IP
 			if tmpIP := v.To4(); tmpIP != nil {
 				b := []byte{tmpIP[3], tmpIP[2], tmpIP[1], tmpIP[0]}
 				writeAttr(key, LWES_IP_ADDR_TOKEN, nil, b)
@@ -222,9 +216,8 @@ func (event *Event) fromBytes(buf []byte) {
 			read(&tmpUint16)
 			event.Attributes[attrName] = string(p.Next(int(tmpUint16)))
 		case LWES_IP_ADDR_TOKEN:
-			tmpIp := p.Next(4)
 			// not sure if this is completely accurate
-			event.Attributes[attrName] = NetIP{tmpIp[3], tmpIp[2], tmpIp[1], tmpIp[0]}
+			event.Attributes[attrName] = NewNetIP(p.Next(4))
 		case LWES_INT_64_TOKEN:
 			read(&tmpInt64)
 			event.Attributes[attrName] = tmpInt64

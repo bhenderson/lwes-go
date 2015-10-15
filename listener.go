@@ -18,6 +18,10 @@ func NewListener(udp string, iface ...*net.Interface) (*Listener, error) {
 	return l, err
 }
 
+func (l *Listener) Close() error {
+	return l.socket.Close()
+}
+
 // Recv receives an event
 func (l *Listener) Recv() (*Event, error) {
 	if l.socket == nil {
